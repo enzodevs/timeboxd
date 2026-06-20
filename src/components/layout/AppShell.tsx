@@ -1,0 +1,285 @@
+import * as React from "react"
+import { addDays } from "date-fns"
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
+import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+
+import type { Task, Timebox } from "@/db/schema"
+import { CALENDAR_DROPPABLE } from "@/lib/dnd"
+import {
+  DAY_MINUTES,
+  PX_PER_HOUR,
+  isoFromDayMinutes,
+  parseYmd,
+  snap,
+  ymd,
+} from "@/lib/time"
+import { setTasksCache, tasksKey, useTaskMutations } from "@/hooks/use-tasks"
+import type { TaskLists } from "@/server/tasks"
+import { useTimeboxMutations } from "@/hooks/use-timeboxes"
+import { useGoogleActions, useGoogleStatus } from "@/hooks/use-google"
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { TodoPanel } from "@/components/todo/TodoPanel"
+import { TodoLaterPanel } from "@/components/todo/TodoLaterPanel"
+import { CalendarColumn } from "@/components/calendar/CalendarColumn"
+import { NotesPanel } from "@/components/notes/NotesPanel"
+import { SettingsDialog } from "@/components/settings/SettingsDialog"
+
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v))
+
+export function AppShell() {
+  const qc = useQueryClient()
+  const [date, setDate] = React.useState(() => ymd(new Date()))
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [activeTask, setActiveTask] = React.useState<Task | null>(null)
+  const gridRef = React.useRef<HTMLDivElement | null>(null)
+
+  const { reorder } = useTaskMutations(date)
+  const { create: createBox } = useTimeboxMutations(date)
+  const { data: google } = useGoogleStatus()
+  const { pushTimebox } = useGoogleActions()
+  const googleConnected = Boolean(google?.connected)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  )
+
+  // Surface the OAuth round-trip result and clean the URL.
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const g = params.get("google")
+    if (g === "connected") {
+      toast.success("Google connected")
+      void qc.invalidateQueries({ queryKey: ["google"] })
+    } else if (g === "error") {
+      toast.error("Google connection failed")
+    }
+    if (g) window.history.replaceState({}, "", window.location.pathname)
+  }, [qc])
+
+  const goPrev = () => setDate((d) => ymd(addDays(parseYmd(d), -1)))
+  const goNext = () => setDate((d) => ymd(addDays(parseYmd(d), 1)))
+  const goToday = () => setDate(ymd(new Date()))
+
+  const onDragStart = (e: DragStartEvent) => {
+    const lists = qc.getQueryData<TaskLists>(tasksKey(date))
+    const id = String(e.active.id)
+    const task =
+      lists?.today.find((t) => t.id === id) ??
+      lists?.later.find((t) => t.id === id) ??
+      null
+    setActiveTask(task)
+  }
+
+  const createTimeboxFromDrop = (task: Task, e: DragEndEvent) => {
+    const rect = gridRef.current?.getBoundingClientRect()
+    let minutes = new Date().getHours() * 60
+    if (rect) {
+      const top = e.active.rect.current.translated?.top ?? rect.top
+      minutes = clamp(
+        snap(((top - rect.top) / PX_PER_HOUR) * 60),
+        0,
+        DAY_MINUTES - 15
+      )
+    }
+    const dur = task.estimateMin ?? 60
+    createBox.mutate({
+      title: task.title,
+      start: isoFromDayMinutes(date, minutes),
+      end: isoFromDayMinutes(date, Math.min(minutes + dur, DAY_MINUTES)),
+      date,
+      deepWork: task.deepWork,
+      tags: task.tags,
+      taskId: task.id,
+    })
+  }
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveTask(null)
+    const { active, over } = e
+    if (!over) return
+
+    const lists = qc.getQueryData<TaskLists>(tasksKey(date))
+    if (!lists) return
+    const id = String(active.id)
+    const source: "today" | "later" | null = lists.today.some(
+      (t) => t.id === id
+    )
+      ? "today"
+      : lists.later.some((t) => t.id === id)
+        ? "later"
+        : null
+    if (!source) return
+    const task = (source === "today" ? lists.today : lists.later).find(
+      (t) => t.id === id
+    )!
+
+    if (over.id === CALENDAR_DROPPABLE) {
+      createTimeboxFromDrop(task, e)
+      return
+    }
+
+    const overId = String(over.id)
+    const target: "today" | "later" =
+      overId === "today" || overId === "later"
+        ? overId
+        : lists.today.some((t) => t.id === overId)
+          ? "today"
+          : lists.later.some((t) => t.id === overId)
+            ? "later"
+            : source
+
+    const today = [...lists.today]
+    const later = [...lists.later]
+
+    if (source === target) {
+      const arr = source === "today" ? today : later
+      const fromIdx = arr.findIndex((t) => t.id === id)
+      const overIdx =
+        overId === target
+          ? arr.length - 1
+          : arr.findIndex((t) => t.id === overId)
+      const moved = arrayMove(
+        arr,
+        fromIdx,
+        overIdx < 0 ? arr.length - 1 : overIdx
+      )
+      if (source === "today") today.splice(0, today.length, ...moved)
+      else later.splice(0, later.length, ...moved)
+    } else {
+      const srcArr = source === "today" ? today : later
+      const tgtArr = target === "today" ? today : later
+      const fromIdx = srcArr.findIndex((t) => t.id === id)
+      srcArr.splice(fromIdx, 1)
+      const updated: Task = {
+        ...task,
+        list: target,
+        date: target === "later" ? null : date,
+      }
+      let toIdx =
+        overId === target
+          ? tgtArr.length
+          : tgtArr.findIndex((t) => t.id === overId)
+      if (toIdx < 0) toIdx = tgtArr.length
+      tgtArr.splice(toIdx, 0, updated)
+    }
+
+    setTasksCache(qc, date, { today, later })
+    reorder.mutate([
+      ...today.map((t, i) => ({
+        id: t.id,
+        sortOrder: i,
+        list: "today" as const,
+        date,
+      })),
+      ...later.map((t, i) => ({
+        id: t.id,
+        sortOrder: i,
+        list: "later" as const,
+        date: null,
+      })),
+    ])
+  }
+
+  const viewTaskInGoogle = () => {
+    const d = parseYmd(date)
+    window.open(
+      `https://calendar.google.com/calendar/u/0/r/day/${d.getFullYear()}/${
+        d.getMonth() + 1
+      }/${d.getDate()}`,
+      "_blank"
+    )
+  }
+
+  const viewBoxInGoogle = (box: Timebox) => {
+    toast.promise(
+      pushTimebox.mutateAsync(box.id).then((r) => {
+        if (r.htmlLink) window.open(r.htmlLink, "_blank")
+        return r
+      }),
+      {
+        loading: "Opening in Google Calendar…",
+        success: "Synced to Google Calendar",
+        error: "Could not sync to Google",
+      }
+    )
+  }
+
+  return (
+    <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        <ResizablePanelGroup orientation="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={27} minSize={18} className="min-w-0">
+            <ResizablePanelGroup orientation="vertical">
+              <ResizablePanel defaultSize={62} minSize={20}>
+                <TodoPanel
+                  date={date}
+                  googleConnected={googleConnected}
+                  onViewInGoogle={viewTaskInGoogle}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={38} minSize={15}>
+                <TodoLaterPanel
+                  date={date}
+                  googleConnected={googleConnected}
+                  onViewInGoogle={viewTaskInGoogle}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize={45} minSize={28} className="min-w-0">
+            <CalendarColumn
+              date={date}
+              gridRef={gridRef}
+              onPrev={goPrev}
+              onNext={goNext}
+              onToday={goToday}
+              onOpenSettings={() => setSettingsOpen(true)}
+              googleConnected={googleConnected}
+              onViewInGoogle={viewBoxInGoogle}
+            />
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize={28} minSize={18} className="min-w-0">
+            <NotesPanel date={date} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+
+        <DragOverlay dropAnimation={null}>
+          {activeTask ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-sm shadow-lg">
+              <span className="truncate">{activeTask.title}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </div>
+  )
+}

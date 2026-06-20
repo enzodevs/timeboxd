@@ -4,12 +4,16 @@ dist
 dist-ssr
 *.local
 .env*
+!.env.example
 .tanstack
 .wrangler
 .output
 .vinxi
 __unconfig*
 todos.json
+
+# local SQLite database
+/data
 
 # typescript
 *.tsbuildinfo

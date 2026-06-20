@@ -1,0 +1,268 @@
+import * as React from "react"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import {
+  ArrowSquareOutIcon,
+  BrainIcon,
+  CalendarPlusIcon,
+  CheckCircleIcon,
+  CircleIcon,
+  CopyIcon,
+  DotsThreeIcon,
+  GoogleLogoIcon,
+  TagIcon,
+  TrashIcon,
+} from "@phosphor-icons/react"
+
+import type { Task } from "@/db/schema"
+import { cn } from "@/lib/utils"
+import { formatClock, isoFromDayMinutes } from "@/lib/time"
+import { useTaskMutations } from "@/hooks/use-tasks"
+import { useTimeboxMutations } from "@/hooks/use-timeboxes"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { AddTagDialog } from "./AddTagDialog"
+
+function formatScheduled(hhmm: string): string {
+  const [h = 0, m = 0] = hhmm.split(":").map(Number)
+  return formatClock(h * 60 + m)
+}
+
+export function TagChip({ tag }: { tag: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+      #{tag}
+    </span>
+  )
+}
+
+interface TodoItemProps {
+  task: Task
+  date: string
+  containerId: "today" | "later"
+  googleConnected?: boolean
+  onViewInGoogle?: (task: Task) => void
+}
+
+export function TodoItem({
+  task,
+  date,
+  googleConnected,
+  onViewInGoogle,
+}: TodoItemProps) {
+  const { update, remove, create } = useTaskMutations(date)
+  const { create: createBox } = useTimeboxMutations(date)
+  const [tagOpen, setTagOpen] = React.useState(false)
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { containerId: task.list } })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const toggleDone = () =>
+    update.mutate({ id: task.id, patch: { completed: !task.completed } })
+
+  const addToCalendar = () => {
+    const startMin = task.scheduledTime
+      ? Number(task.scheduledTime.split(":")[0]) * 60 +
+        Number(task.scheduledTime.split(":")[1])
+      : Math.max(0, new Date().getHours()) * 60
+    const dur = task.estimateMin ?? 60
+    createBox.mutate({
+      title: task.title,
+      start: isoFromDayMinutes(task.date ?? date, startMin),
+      end: isoFromDayMinutes(task.date ?? date, startMin + dur),
+      date: task.date ?? date,
+      deepWork: task.deepWork,
+      tags: task.tags,
+      taskId: task.id,
+    })
+  }
+
+  const duplicate = () =>
+    create.mutate({
+      title: task.title,
+      tags: task.tags,
+      deepWork: task.deepWork,
+      list: task.list as "today" | "later",
+      date: task.date,
+      scheduledTime: task.scheduledTime,
+      estimateMin: task.estimateMin,
+    })
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group/item flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 shadow-xs transition-shadow",
+        isDragging && "z-10 opacity-60 shadow-md"
+      )}
+    >
+      <button
+        type="button"
+        onClick={toggleDone}
+        aria-label={task.completed ? "Mark as not done" : "Mark as done"}
+        className={cn(
+          "shrink-0 text-muted-foreground/60 transition-colors hover:text-primary",
+          task.completed && "text-primary"
+        )}
+      >
+        {task.completed ? (
+          <CheckCircleIcon weight="fill" className="size-5" />
+        ) : (
+          <CircleIcon className="size-5" />
+        )}
+      </button>
+
+      <div
+        {...attributes}
+        {...listeners}
+        className="min-w-0 flex-1 cursor-grab active:cursor-grabbing"
+      >
+        <div className="flex items-center gap-1.5">
+          {task.deepWork && (
+            <BrainIcon
+              weight="fill"
+              className="size-3.5 shrink-0 text-primary"
+            />
+          )}
+          <span
+            className={cn(
+              "truncate text-sm",
+              task.completed && "text-muted-foreground line-through"
+            )}
+          >
+            {task.title}
+          </span>
+        </div>
+        {task.tags.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {task.tags.map((t) => (
+              <TagChip key={t} tag={t} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {task.scheduledTime && (
+        <span className="shrink-0 rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+          {formatScheduled(task.scheduledTime)}
+        </span>
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="To-do actions"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition group-hover/item:opacity-100 hover:bg-muted hover:text-foreground aria-expanded:opacity-100"
+          >
+            <DotsThreeIcon weight="bold" className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onSelect={toggleDone}>
+            <CheckCircleIcon />
+            {task.completed ? "Mark as not done" : "Mark as done"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() =>
+              update.mutate({
+                id: task.id,
+                patch: { deepWork: !task.deepWork },
+              })
+            }
+          >
+            <BrainIcon />
+            {task.deepWork ? "Unmark deep work" : "Mark as deep work"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={duplicate}>
+            <CopyIcon />
+            Duplicate to-do
+          </DropdownMenuItem>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <ArrowSquareOutIcon />
+              Move to
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                onSelect={() =>
+                  update.mutate({
+                    id: task.id,
+                    patch: { list: "today", date, sortOrder: Date.now() },
+                  })
+                }
+              >
+                Today
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  update.mutate({
+                    id: task.id,
+                    patch: { list: "later", date: null, sortOrder: Date.now() },
+                  })
+                }
+              >
+                To-do Later
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuItem onSelect={addToCalendar}>
+            <CalendarPlusIcon />
+            Add to calendar
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            disabled={!googleConnected}
+            onSelect={() => onViewInGoogle?.(task)}
+          >
+            <GoogleLogoIcon />
+            View in Calendar
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => setTagOpen(true)}>
+            <TagIcon />
+            Add tag
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => remove.mutate(task.id)}
+          >
+            <TrashIcon />
+            Delete to-do
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AddTagDialog
+        open={tagOpen}
+        onOpenChange={setTagOpen}
+        existing={task.tags}
+        onAdd={(tags) => update.mutate({ id: task.id, patch: { tags } })}
+      />
+    </li>
+  )
+}

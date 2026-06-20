@@ -1,7 +1,12 @@
+import * as React from "react"
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { ThemeProvider } from "next-themes"
 
+import { Tooltip } from "radix-ui"
+import { Toaster } from "@/components/ui/sonner"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRoute({
@@ -15,7 +20,12 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "timeboxd",
+      },
+      {
+        name: "description",
+        content:
+          "Open-source time-boxing — plan your day, drag tasks onto a timeline, braindump notes. Syncs with Google Calendar & Tasks.",
       },
     ],
     links: [
@@ -35,13 +45,36 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const [queryClient] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
+        },
+      })
+  )
+
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryClientProvider client={queryClient}>
+            <Tooltip.Provider delayDuration={200}>{children}</Tooltip.Provider>
+            <Toaster position="bottom-right" />
+          </QueryClientProvider>
+        </ThemeProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",
