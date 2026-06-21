@@ -22,13 +22,15 @@ import { useTimeboxMutations } from "@/hooks/use-timeboxes"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import type { MenuParts } from "@/components/ui/context-menu"
+import { CONTEXT_PARTS, DROPDOWN_PARTS } from "@/lib/menu-parts"
 import { AddTagDialog } from "./AddTagDialog"
 
 function formatScheduled(hhmm: string): string {
@@ -107,16 +109,85 @@ export function TodoItem({
       estimateMin: task.estimateMin,
     })
 
+  // Shared by the ⋯ dropdown and the right-click context menu.
+  const menuItems = (M: MenuParts) => (
+    <>
+      <M.Item onSelect={toggleDone}>
+        <CheckCircleIcon />
+        {task.completed ? "Mark as not done" : "Mark as done"}
+      </M.Item>
+      <M.Item
+        onSelect={() =>
+          update.mutate({ id: task.id, patch: { deepWork: !task.deepWork } })
+        }
+      >
+        <BrainIcon />
+        {task.deepWork ? "Unmark deep work" : "Mark as deep work"}
+      </M.Item>
+      <M.Item onSelect={duplicate}>
+        <CopyIcon />
+        Duplicate to-do
+      </M.Item>
+      <M.Sub>
+        <M.SubTrigger>
+          <ArrowSquareOutIcon />
+          Move to
+        </M.SubTrigger>
+        <M.SubContent>
+          <M.Item
+            onSelect={() =>
+              update.mutate({
+                id: task.id,
+                patch: { list: "today", date, sortOrder: Date.now() },
+              })
+            }
+          >
+            Today
+          </M.Item>
+          <M.Item
+            onSelect={() =>
+              update.mutate({
+                id: task.id,
+                patch: { list: "later", date: null, sortOrder: Date.now() },
+              })
+            }
+          >
+            To-do Later
+          </M.Item>
+        </M.SubContent>
+      </M.Sub>
+      <M.Item onSelect={addToCalendar}>
+        <CalendarPlusIcon />
+        Add to calendar
+      </M.Item>
+      <M.Item disabled={!googleConnected} onSelect={() => onViewInGoogle?.(task)}>
+        <GoogleLogoIcon />
+        View in Calendar
+      </M.Item>
+      <M.Item onSelect={() => setTagOpen(true)}>
+        <TagIcon />
+        Add tag
+      </M.Item>
+      <M.Separator />
+      <M.Item variant="destructive" onSelect={() => remove.mutate(task.id)}>
+        <TrashIcon />
+        Delete to-do
+      </M.Item>
+    </>
+  )
+
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group/item flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 shadow-xs transition-shadow",
-        isDragging && "z-10 opacity-60 shadow-md"
-      )}
-    >
-      <button
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <li
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            "group/item flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 shadow-xs transition-shadow",
+            isDragging && "z-10 opacity-60 shadow-md"
+          )}
+        >
+          <button
         type="button"
         onClick={toggleDone}
         aria-label={task.completed ? "Mark as not done" : "Mark as done"}
@@ -179,90 +250,21 @@ export function TodoItem({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onSelect={toggleDone}>
-            <CheckCircleIcon />
-            {task.completed ? "Mark as not done" : "Mark as done"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() =>
-              update.mutate({
-                id: task.id,
-                patch: { deepWork: !task.deepWork },
-              })
-            }
-          >
-            <BrainIcon />
-            {task.deepWork ? "Unmark deep work" : "Mark as deep work"}
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={duplicate}>
-            <CopyIcon />
-            Duplicate to-do
-          </DropdownMenuItem>
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <ArrowSquareOutIcon />
-              Move to
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                onSelect={() =>
-                  update.mutate({
-                    id: task.id,
-                    patch: { list: "today", date, sortOrder: Date.now() },
-                  })
-                }
-              >
-                Today
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() =>
-                  update.mutate({
-                    id: task.id,
-                    patch: { list: "later", date: null, sortOrder: Date.now() },
-                  })
-                }
-              >
-                To-do Later
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-
-          <DropdownMenuItem onSelect={addToCalendar}>
-            <CalendarPlusIcon />
-            Add to calendar
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            disabled={!googleConnected}
-            onSelect={() => onViewInGoogle?.(task)}
-          >
-            <GoogleLogoIcon />
-            View in Calendar
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onSelect={() => setTagOpen(true)}>
-            <TagIcon />
-            Add tag
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onSelect={() => remove.mutate(task.id)}
-          >
-            <TrashIcon />
-            Delete to-do
-          </DropdownMenuItem>
+          {menuItems(DROPDOWN_PARTS)}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AddTagDialog
-        open={tagOpen}
-        onOpenChange={setTagOpen}
-        existing={task.tags}
-        onAdd={(tags) => update.mutate({ id: task.id, patch: { tags } })}
-      />
-    </li>
+          <AddTagDialog
+            open={tagOpen}
+            onOpenChange={setTagOpen}
+            existing={task.tags}
+            onAdd={(tags) => update.mutate({ id: task.id, patch: { tags } })}
+          />
+        </li>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        {menuItems(CONTEXT_PARTS)}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

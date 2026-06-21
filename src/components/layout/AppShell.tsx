@@ -249,6 +249,7 @@ export function AppShell() {
         onPrev={goPrev}
         onNext={goNext}
         onToday={goToday}
+        onGoToDate={setDate}
         onOpenSettings={() => setSettingsOpen(true)}
         googleConnected={googleConnected}
       />
@@ -260,9 +261,13 @@ export function AppShell() {
         onDragEnd={onDragEnd}
       >
         <ResizablePanelGroup orientation="horizontal" className="flex-1">
-          <ResizablePanel defaultSize={27} minSize={18} className="min-w-0">
+          <ResizablePanel
+            defaultSize="27%"
+            minSize="260px"
+            className="min-w-0"
+          >
             <ResizablePanelGroup orientation="vertical">
-              <ResizablePanel defaultSize={62} minSize={20}>
+              <ResizablePanel defaultSize="62%" minSize="160px">
                 <TodoPanel
                   date={date}
                   googleConnected={googleConnected}
@@ -270,7 +275,7 @@ export function AppShell() {
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={38} minSize={15}>
+              <ResizablePanel defaultSize="38%" minSize="120px">
                 <TodoLaterPanel
                   date={date}
                   googleConnected={googleConnected}
@@ -282,7 +287,11 @@ export function AppShell() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={45} minSize={28} className="min-w-0">
+          <ResizablePanel
+            defaultSize="45%"
+            minSize="420px"
+            className="min-w-0"
+          >
             <CalendarColumn
               date={date}
               gridRef={gridRef}
@@ -293,7 +302,11 @@ export function AppShell() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={28} minSize={18} className="min-w-0">
+          <ResizablePanel
+            defaultSize="28%"
+            minSize="280px"
+            className="min-w-0"
+          >
             <NotesPanel date={date} />
           </ResizablePanel>
         </ResizablePanelGroup>

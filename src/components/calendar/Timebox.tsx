@@ -9,6 +9,7 @@ import {
   CopyIcon,
   DotsThreeIcon,
   GoogleLogoIcon,
+  PaletteIcon,
   TagIcon,
   TrashIcon,
 } from "@phosphor-icons/react"
@@ -24,17 +25,24 @@ import {
   snap,
   ymd,
 } from "@/lib/time"
+import {
+  BOX_COLORS,
+  BOX_COLOR_NAMES,
+  resolveBoxColor,
+} from "@/lib/timebox-colors"
 import { useTimeboxMutations } from "@/hooks/use-timeboxes"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import type { MenuParts } from "@/components/ui/context-menu"
+import { CONTEXT_PARTS, DROPDOWN_PARTS } from "@/lib/menu-parts"
 import { AddTagDialog } from "@/components/todo/AddTagDialog"
 
 const MIN_DURATION = 15
@@ -153,22 +161,129 @@ export function Timebox({
   }
 
   const deep = box.deepWork
+  const accent = resolveBoxColor(box)
+
+  // Shared by the ⋯ dropdown and the right-click context menu.
+  const menuItems = (M: MenuParts) => (
+    <>
+      <M.Item
+        onSelect={() =>
+          update.mutate({ id: box.id, patch: { completed: !box.completed } })
+        }
+      >
+        <CheckCircleIcon />
+        {box.completed ? "Mark as not done" : "Mark as done"}
+      </M.Item>
+      <M.Item
+        onSelect={() =>
+          update.mutate({ id: box.id, patch: { deepWork: !box.deepWork } })
+        }
+      >
+        <BrainIcon />
+        {box.deepWork ? "Unmark deep work" : "Mark as deep work"}
+      </M.Item>
+      <M.Item
+        onSelect={() =>
+          create.mutate({
+            title: box.title,
+            start: box.start,
+            end: box.end,
+            date: box.date,
+            deepWork: box.deepWork,
+            tags: box.tags,
+          })
+        }
+      >
+        <CopyIcon />
+        Duplicate
+      </M.Item>
+      <M.Sub>
+        <M.SubTrigger>
+          <ArrowRightIcon />
+          Move to
+        </M.SubTrigger>
+        <M.SubContent>
+          <M.Item onSelect={() => moveDay(-1)}>
+            <ArrowLeftIcon />
+            Previous day
+          </M.Item>
+          <M.Item onSelect={() => moveDay(1)}>
+            <ArrowRightIcon />
+            Next day
+          </M.Item>
+        </M.SubContent>
+      </M.Sub>
+      <M.Item
+        disabled={!googleConnected}
+        onSelect={() => onViewInGoogle?.(box)}
+      >
+        <GoogleLogoIcon />
+        View in Calendar
+      </M.Item>
+      <M.Item onSelect={() => setTagOpen(true)}>
+        <TagIcon />
+        Add tag
+      </M.Item>
+      <M.Sub>
+        <M.SubTrigger>
+          <PaletteIcon />
+          Color
+        </M.SubTrigger>
+        <M.SubContent>
+          <M.Item
+            onSelect={() =>
+              update.mutate({ id: box.id, patch: { color: null } })
+            }
+          >
+            <span
+              className="size-3.5 rounded-full border border-border"
+              style={{ background: accent }}
+            />
+            Auto
+          </M.Item>
+          {BOX_COLOR_NAMES.map((name) => (
+            <M.Item
+              key={name}
+              onSelect={() =>
+                update.mutate({ id: box.id, patch: { color: name } })
+              }
+            >
+              <span
+                className="size-3.5 rounded-full"
+                style={{ background: BOX_COLORS[name] }}
+              />
+              <span className="capitalize">{name}</span>
+            </M.Item>
+          ))}
+        </M.SubContent>
+      </M.Sub>
+      <M.Separator />
+      <M.Item variant="destructive" onSelect={() => remove.mutate(box.id)}>
+        <TrashIcon />
+        Delete timebox
+      </M.Item>
+    </>
+  )
 
   return (
-    <div
-      className={cn(
-        "group/box absolute overflow-hidden rounded-lg px-2 py-1 text-left text-timebox-foreground shadow-sm ring-1 ring-black/5 transition-shadow select-none",
-        deep ? "bg-timebox-deep" : "bg-timebox",
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={cn(
+            "group/box absolute overflow-hidden rounded-lg border py-1 pr-2 pl-3 text-left shadow-sm transition select-none",
         draft
-          ? "z-30 cursor-grabbing shadow-lg"
+          ? "z-30 cursor-grabbing shadow-md"
           : "cursor-grab hover:shadow-md",
-        box.completed && "opacity-70"
+        box.completed && "opacity-60"
       )}
       style={{
         top,
         height,
         left: `calc(${(100 / cols) * col}% + 2px)`,
         width: `calc(${100 / cols}% - 4px)`,
+        ["--box" as string]: accent,
+        background: "color-mix(in oklch, var(--box) 20%, var(--card))",
+        borderColor: "color-mix(in oklch, var(--box) 34%, transparent)",
       }}
       onPointerDown={beginDrag("move")}
       onDoubleClick={(e) => {
@@ -176,23 +291,36 @@ export function Timebox({
         setEditing(true)
       }}
     >
+      {/* colored accent rail */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1"
+        style={{ background: "var(--box)" }}
+      />
+
       {/* top resize handle */}
       <div
         onPointerDown={beginDrag("top")}
         className="absolute inset-x-0 top-0 z-10 h-1.5 cursor-ns-resize"
       >
-        <div className="mx-auto mt-0.5 h-0.5 w-6 rounded-full bg-white/0 transition-colors group-hover/box:bg-white/50" />
+        <div className="mx-auto mt-0.5 h-0.5 w-6 rounded-full bg-foreground/0 transition-colors group-hover/box:bg-foreground/30" />
       </div>
 
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0 flex-1">
           <div
             className={cn(
-              "flex items-center gap-1 text-[10px] leading-tight text-timebox-foreground/85",
+              "flex items-center gap-1 text-[10px] leading-tight font-medium text-muted-foreground",
               compact && "text-[9px]"
             )}
           >
-            {deep && <BrainIcon weight="fill" className="size-3 shrink-0" />}
+            {deep && (
+              <BrainIcon
+                weight="fill"
+                className="size-3 shrink-0"
+                style={{ color: "var(--box)" }}
+              />
+            )}
             <span className="truncate">
               {formatClock(startMin)} - {formatClock(endMin)}
             </span>
@@ -211,13 +339,13 @@ export function Timebox({
                   setEditing(false)
                 }
               }}
-              className="mt-0.5 w-full rounded bg-white/20 px-1 text-sm font-medium text-white outline-none placeholder:text-white/60"
+              className="mt-0.5 w-full rounded bg-foreground/10 px-1 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
             />
           ) : (
             <div
               className={cn(
-                "mt-0.5 truncate text-sm font-medium",
-                box.completed && "line-through",
+                "mt-0.5 truncate text-sm font-medium text-foreground",
+                box.completed && "text-muted-foreground line-through",
                 compact && "mt-0 text-xs"
               )}
             >
@@ -237,7 +365,7 @@ export function Timebox({
                 patch: { completed: !box.completed },
               })
             }
-            className="flex size-5 items-center justify-center rounded text-white/90 hover:bg-white/20"
+            className="flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground"
           >
             {box.completed ? (
               <CheckCircleIcon weight="fill" className="size-4" />
@@ -251,84 +379,13 @@ export function Timebox({
                 type="button"
                 aria-label="Timebox actions"
                 onPointerDown={(e) => e.stopPropagation()}
-                className="flex size-5 items-center justify-center rounded text-white/90 hover:bg-white/20"
+                className="flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground"
               >
                 <DotsThreeIcon weight="bold" className="size-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem
-                onSelect={() =>
-                  update.mutate({
-                    id: box.id,
-                    patch: { completed: !box.completed },
-                  })
-                }
-              >
-                <CheckCircleIcon />
-                {box.completed ? "Mark as not done" : "Mark as done"}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() =>
-                  update.mutate({
-                    id: box.id,
-                    patch: { deepWork: !box.deepWork },
-                  })
-                }
-              >
-                <BrainIcon />
-                {box.deepWork ? "Unmark deep work" : "Mark as deep work"}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() =>
-                  create.mutate({
-                    title: box.title,
-                    start: box.start,
-                    end: box.end,
-                    date: box.date,
-                    deepWork: box.deepWork,
-                    tags: box.tags,
-                  })
-                }
-              >
-                <CopyIcon />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ArrowRightIcon />
-                  Move to
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onSelect={() => moveDay(-1)}>
-                    <ArrowLeftIcon />
-                    Previous day
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => moveDay(1)}>
-                    <ArrowRightIcon />
-                    Next day
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuItem
-                disabled={!googleConnected}
-                onSelect={() => onViewInGoogle?.(box)}
-              >
-                <GoogleLogoIcon />
-                View in Calendar
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setTagOpen(true)}>
-                <TagIcon />
-                Add tag
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => remove.mutate(box.id)}
-              >
-                <TrashIcon />
-                Delete timebox
-              </DropdownMenuItem>
+              {menuItems(DROPDOWN_PARTS)}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -339,7 +396,7 @@ export function Timebox({
           {box.tags.map((t) => (
             <span
               key={t}
-              className="rounded-full bg-white/20 px-1.5 text-[10px] font-medium"
+              className="rounded-full bg-foreground/10 px-1.5 text-[10px] font-medium text-muted-foreground"
             >
               #{t}
             </span>
@@ -352,7 +409,7 @@ export function Timebox({
         onPointerDown={beginDrag("bottom")}
         className="absolute inset-x-0 bottom-0 z-10 h-1.5 cursor-ns-resize"
       >
-        <div className="mx-auto h-0.5 w-6 rounded-full bg-white/0 transition-colors group-hover/box:bg-white/50" />
+        <div className="mx-auto h-0.5 w-6 rounded-full bg-foreground/0 transition-colors group-hover/box:bg-foreground/30" />
       </div>
 
       <AddTagDialog
@@ -361,6 +418,11 @@ export function Timebox({
         existing={box.tags}
         onAdd={(tags) => update.mutate({ id: box.id, patch: { tags } })}
       />
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        {menuItems(CONTEXT_PARTS)}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

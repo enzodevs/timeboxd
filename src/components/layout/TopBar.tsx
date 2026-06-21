@@ -1,6 +1,8 @@
+import * as React from "react"
 import { format } from "date-fns"
 import { useTheme } from "next-themes"
 import {
+  CalendarBlankIcon,
   CaretLeftIcon,
   CaretRightIcon,
   GearSixIcon,
@@ -14,12 +16,19 @@ import { parseYmd, ymd } from "@/lib/time"
 import { cn } from "@/lib/utils"
 import { clearGhosttyTheme } from "@/themes/ghostty-theme"
 import { OPEN_SEARCH_EVENT } from "@/components/search/CommandPalette"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface TopBarProps {
   date: string
   onPrev: () => void
   onNext: () => void
   onToday: () => void
+  onGoToDate: (date: string) => void
   onOpenSettings: () => void
   googleConnected?: boolean
 }
@@ -32,10 +41,12 @@ export function TopBar({
   onPrev,
   onNext,
   onToday,
+  onGoToDate,
   onOpenSettings,
   googleConnected,
 }: TopBarProps) {
   const { resolvedTheme, setTheme } = useTheme()
+  const [calOpen, setCalOpen] = React.useState(false)
   const d = parseYmd(date)
   const isToday = date === ymd(new Date())
 
@@ -70,21 +81,53 @@ export function TopBar({
         >
           <CaretLeftIcon className="size-4" />
         </button>
-        <button
-          type="button"
-          onClick={onToday}
-          title="Jump to today"
-          className="flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-muted sm:min-w-[13rem]"
-        >
-          <span className="truncate tabular-nums">
-            {format(d, "EEEE, MMMM d")}
-          </span>
-          {isToday ? (
-            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary uppercase">
-              Today
-            </span>
-          ) : null}
-        </button>
+        <Popover open={calOpen} onOpenChange={setCalOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              title="Pick a date"
+              className="flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-muted data-[state=open]:bg-muted sm:min-w-[13rem]"
+            >
+              <CalendarBlankIcon className="size-4 text-muted-foreground" />
+              <span className="truncate tabular-nums">
+                {format(d, "EEEE, MMMM d")}
+              </span>
+              {isToday ? (
+                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary uppercase">
+                  Today
+                </span>
+              ) : null}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="center" className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={d}
+              defaultMonth={d}
+              onSelect={(day) => {
+                if (day) {
+                  onGoToDate(ymd(day))
+                  setCalOpen(false)
+                }
+              }}
+            />
+            <div className="flex items-center justify-between border-t border-border px-3 py-2">
+              <span className="text-xs text-muted-foreground">
+                {isToday ? "Today" : format(d, "EEE, MMM d")}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onToday()
+                  setCalOpen(false)
+                }}
+                className="rounded-md px-2 py-1 text-xs font-medium text-primary transition hover:bg-muted"
+              >
+                Go to today
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
         <button
           type="button"
           aria-label="Next day"

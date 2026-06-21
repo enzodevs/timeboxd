@@ -103,7 +103,7 @@ export function CommandPalette({
     <CommandDialog
       open={open}
       onOpenChange={change}
-      className="sm:max-w-xl"
+      className="sm:max-w-2xl"
     >
       <Command shouldFilter={false}>
         <CommandInput
