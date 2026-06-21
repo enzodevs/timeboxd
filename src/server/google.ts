@@ -11,7 +11,6 @@ import {
   googleConfigured,
 } from "@/lib/google/oauth"
 import {
-  getPrimaryEmail,
   listEvents,
   listGTasks,
   listTaskLists,
@@ -52,43 +51,6 @@ async function getAuthedClient(): Promise<OAuth2Client | null> {
       .where(eq(integrations.id, "google"))
   })
   return client
-}
-
-/** Exchanges an OAuth code for tokens and stores them. Used by the callback route. */
-export async function connectWithCode(code: string): Promise<void> {
-  await ensureDb()
-  const client = createOAuthClient()
-  const { tokens } = await client.getToken(code)
-  client.setCredentials(tokens)
-  const email = await getPrimaryEmail(client)
-  const now = nowISO()
-  await db
-    .insert(integrations)
-    .values({
-      id: "google",
-      accessToken: tokens.access_token ?? null,
-      refreshToken: tokens.refresh_token ?? null,
-      expiresAt: tokens.expiry_date ?? null,
-      scope: tokens.scope ?? null,
-      email,
-      calendarId: "primary",
-      taskListId: "@default",
-      syncEnabled: true,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: integrations.id,
-      set: {
-        accessToken: tokens.access_token ?? null,
-        ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),
-        expiresAt: tokens.expiry_date ?? null,
-        scope: tokens.scope ?? null,
-        email,
-        syncEnabled: true,
-        updatedAt: now,
-      },
-    })
 }
 
 export const getGoogleStatus = createServerFn({ method: "GET" }).handler(
