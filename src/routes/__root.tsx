@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes"
 
 import { Tooltip } from "radix-ui"
 import { Toaster } from "@/components/ui/sonner"
+import { GHOSTTY_INIT_SCRIPT } from "@/themes/ghostty-theme"
 import appCss from "../styles.css?url"
 
 export const Route = createRootRoute({
@@ -61,6 +62,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: GHOSTTY_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

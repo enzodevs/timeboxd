@@ -16,8 +16,9 @@ export function TodoInput({ date }: { date: string }) {
   const { create } = useTaskMutations(date)
   const { create: createBox } = useTimeboxMutations(date)
 
-  // Global "N" shortcut focuses the quick-add field.
+  // Global "N" shortcut (and the palette's "New task" action) focus quick-add.
   React.useEffect(() => {
+    const focus = () => inputRef.current?.focus()
     const handler = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== "n") return
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -29,10 +30,14 @@ export function TodoInput({ date }: { date: string }) {
         (el as HTMLElement | null)?.isContentEditable
       if (editable) return
       e.preventDefault()
-      inputRef.current?.focus()
+      focus()
     }
     window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
+    window.addEventListener("timeboxd:focus-new-task", focus)
+    return () => {
+      window.removeEventListener("keydown", handler)
+      window.removeEventListener("timeboxd:focus-new-task", focus)
+    }
   }, [])
 
   const submit = async () => {

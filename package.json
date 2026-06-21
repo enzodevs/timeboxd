@@ -22,6 +22,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/lexend": "^5.2.11",
+    "@fontsource/poppins": "^5.2.7",
     "@libsql/client": "^0.17.4",
     "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/vite": "^4",

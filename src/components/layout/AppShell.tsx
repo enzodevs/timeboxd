@@ -37,6 +37,8 @@ import { TodoLaterPanel } from "@/components/todo/TodoLaterPanel"
 import { CalendarColumn } from "@/components/calendar/CalendarColumn"
 import { NotesPanel } from "@/components/notes/NotesPanel"
 import { SettingsDialog } from "@/components/settings/SettingsDialog"
+import { TopBar } from "@/components/layout/TopBar"
+import { CommandPalette } from "@/components/search/CommandPalette"
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v))
@@ -74,6 +76,27 @@ export function AppShell() {
   const goPrev = () => setDate((d) => ymd(addDays(parseYmd(d), -1)))
   const goNext = () => setDate((d) => ymd(addDays(parseYmd(d), 1)))
   const goToday = () => setDate(ymd(new Date()))
+
+  // Arrow-key day navigation when not typing in a field.
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
+      const el = document.activeElement
+      const tag = el?.tagName
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (el as HTMLElement | null)?.isContentEditable
+      )
+        return
+      e.preventDefault()
+      if (e.key === "ArrowLeft") goPrev()
+      else goNext()
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
 
   const onDragStart = (e: DragStartEvent) => {
     const lists = qc.getQueryData<TaskLists>(tasksKey(date))
@@ -221,6 +244,15 @@ export function AppShell() {
 
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
+      <TopBar
+        date={date}
+        onPrev={goPrev}
+        onNext={goNext}
+        onToday={goToday}
+        onOpenSettings={() => setSettingsOpen(true)}
+        googleConnected={googleConnected}
+      />
+
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
@@ -254,10 +286,6 @@ export function AppShell() {
             <CalendarColumn
               date={date}
               gridRef={gridRef}
-              onPrev={goPrev}
-              onNext={goNext}
-              onToday={goToday}
-              onOpenSettings={() => setSettingsOpen(true)}
               googleConnected={googleConnected}
               onViewInGoogle={viewBoxInGoogle}
             />
@@ -278,6 +306,15 @@ export function AppShell() {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <CommandPalette
+        date={date}
+        onGoToDate={setDate}
+        onPrev={goPrev}
+        onNext={goNext}
+        onToday={goToday}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>

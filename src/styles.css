@@ -1,12 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/lexend";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
 @import "@fontsource-variable/jetbrains-mono";
+@import "./themes/ghostty-themes.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-sans: 'Lexend Variable', ui-sans-serif, system-ui, -apple-system,
+      'Segoe UI', sans-serif;
+    --font-heading: 'Poppins', var(--font-sans);
     --font-mono: 'JetBrains Mono Variable', monospace;
     --color-timebox: var(--timebox);
     --color-timebox-foreground: var(--timebox-foreground);
@@ -140,6 +148,9 @@
     }
   body {
     @apply antialiased;
+    }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
     }
 }
 

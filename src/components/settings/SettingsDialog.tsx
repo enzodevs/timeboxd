@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { GhosttyThemePicker } from "@/components/settings/GhosttyThemePicker"
+import { clearGhosttyTheme } from "@/themes/ghostty-theme"
 
 const themes = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -60,7 +62,10 @@ export function SettingsDialog({
                 <button
                   key={t.value}
                   type="button"
-                  onClick={() => setTheme(t.value)}
+                  onClick={() => {
+                    clearGhosttyTheme()
+                    setTheme(t.value)
+                  }}
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-3 text-xs font-medium transition hover:bg-muted",
                     active && "border-primary ring-1 ring-primary/30"
@@ -71,6 +76,10 @@ export function SettingsDialog({
                 </button>
               )
             })}
+          </div>
+          <div className="space-y-1.5 pt-1">
+            <p className="text-xs text-muted-foreground">Ghostty theme</p>
+            <GhosttyThemePicker />
           </div>
         </section>
 
