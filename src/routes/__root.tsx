@@ -28,12 +28,26 @@ export const Route = createRootRoute({
         content:
           "Open-source time-boxing — plan your day, drag tasks onto a timeline, braindump notes. Syncs with Google Calendar & Tasks.",
       },
+      {
+        name: "theme-color",
+        content: "#10b981",
+      },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "96x96",
+        href: "/favicon-96x96.png",
+      },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/site.webmanifest" },
     ],
   }),
   notFoundComponent: () => (

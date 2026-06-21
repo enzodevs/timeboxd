@@ -57,6 +57,12 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* Magic UI animation utilities (marquee, rainbow button, shiny text) */
+    --animate-marquee: marquee var(--duration, 40s) linear infinite;
+    --animate-marquee-vertical: marquee-vertical var(--duration, 40s) linear infinite;
+    --animate-rainbow: rainbow var(--speed, 2s) infinite linear;
+    --animate-shiny-text: shiny-text 8s infinite;
+    --animate-orbit: orbit calc(var(--duration, 20) * 1s) linear infinite;
 }
 
 :root {
@@ -82,6 +88,28 @@
     --timebox: oklch(0.72 0.135 163);
     --timebox-foreground: oklch(0.99 0.01 160);
     --timebox-deep: oklch(0.62 0.13 168);
+    /* Magic UI rainbow set — anchored on the brand green, drives RainbowButton */
+    --color-1: oklch(0.72 0.135 163);
+    --color-2: oklch(0.7 0.14 200);
+    --color-3: oklch(0.7 0.15 250);
+    --color-4: oklch(0.72 0.14 130);
+    --color-5: oklch(0.75 0.13 175);
+    /* Depth system — realistic combined shadows (light from above).
+       Inset top highlight + a hard near shadow + a soft diffuse shadow,
+       tinted toward the brand's dark green rather than pure black. */
+    --elevation-low:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.7),
+      0 1px 2px -1px oklch(0.21 0.03 165 / 0.13),
+      0 2px 6px -2px oklch(0.21 0.03 165 / 0.1);
+    --elevation-high:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.85),
+      0 2px 4px -2px oklch(0.21 0.03 165 / 0.1),
+      0 10px 24px -8px oklch(0.21 0.03 165 / 0.18),
+      0 18px 36px -16px oklch(0.21 0.03 165 / 0.12);
+    /* Recessed groove — dark inset at the top edge, light at the bottom. */
+    --sunken:
+      inset 0 2px 4px 0 oklch(0.21 0.03 165 / 0.12),
+      inset 0 -1px 0 0 oklch(1 0 0 / 0.7);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -121,6 +149,25 @@
     --timebox: oklch(0.70 0.14 163);
     --timebox-foreground: oklch(0.99 0.01 160);
     --timebox-deep: oklch(0.60 0.13 168);
+    /* Magic UI rainbow set — anchored on the brand green, drives RainbowButton */
+    --color-1: oklch(0.74 0.14 163);
+    --color-2: oklch(0.72 0.15 200);
+    --color-3: oklch(0.72 0.16 250);
+    --color-4: oklch(0.74 0.15 130);
+    --color-5: oklch(0.77 0.14 175);
+    /* Depth system (dark) — depth comes from a lighter surface + a faint top
+       highlight + a soft cast shadow; drop shadows read weak on dark. */
+    --elevation-low:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.06),
+      0 1px 2px -1px oklch(0 0 0 / 0.45),
+      0 2px 6px -2px oklch(0 0 0 / 0.35);
+    --elevation-high:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.09),
+      0 2px 6px -2px oklch(0 0 0 / 0.4),
+      0 12px 28px -8px oklch(0 0 0 / 0.55);
+    --sunken:
+      inset 0 2px 5px 0 oklch(0 0 0 / 0.45),
+      inset 0 -1px 0 0 oklch(1 0 0 / 0.05);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -209,4 +256,108 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ── Magic UI keyframes (marquee rows, rainbow button, shiny text) ── */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap, 1rem)));
+  }
+}
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap, 1rem)));
+  }
+}
+@keyframes rainbow {
+  0% {
+    background-position: 0%;
+  }
+  100% {
+    background-position: 200%;
+  }
+}
+@keyframes shiny-text {
+  0%,
+  90%,
+  100% {
+    background-position: calc(-100% - var(--shiny-width, 100px)) 0;
+  }
+  30%,
+  60% {
+    background-position: calc(100% + var(--shiny-width, 100px)) 0;
+  }
+}
+@keyframes orbit {
+  0% {
+    transform: rotate(calc(var(--angle) * 1deg))
+      translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+  }
+  100% {
+    transform: rotate(calc(var(--angle) * 1deg + 360deg))
+      translateY(calc(var(--radius) * 1px))
+      rotate(calc((var(--angle) * -1deg) - 360deg));
+  }
+}
+
+/* ── Depth & elevation utilities (unlayered so they win over Tailwind shadow
+   utilities). Motion token: 250ms / cubic-bezier(0.22,1,0.36,1) — the
+   "smooth ease-out" from the transitions.dev token set. ── */
+.tb-card {
+  box-shadow: var(--elevation-low);
+  transition:
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tb-card-interactive:hover {
+  box-shadow: var(--elevation-high);
+  transform: translateY(-2px);
+}
+.tb-sunken {
+  box-shadow: var(--sunken);
+}
+/* Selected/primary surface: a touch of overhead light as a top-down sheen. */
+.tb-highlight {
+  background-image: linear-gradient(
+    to bottom,
+    oklch(1 0 0 / 0.05),
+    transparent 45%
+  );
+}
+.dark .tb-highlight {
+  background-image: linear-gradient(
+    to bottom,
+    oklch(1 0 0 / 0.06),
+    transparent 45%
+  );
+}
+/* Light-mode luminosity separation: page sits a step below white cards. */
+.landing-surface {
+  background-color: oklch(0.985 0.004 165);
+}
+.dark .landing-surface {
+  background-color: var(--background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-vertical,
+  .animate-rainbow,
+  .animate-shiny-text,
+  .animate-orbit {
+    animation: none !important;
+  }
+  .tb-card {
+    transition: none;
+  }
+  .tb-card-interactive:hover {
+    transform: none;
+  }
 }

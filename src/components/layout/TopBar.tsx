@@ -9,7 +9,6 @@ import {
   MagnifyingGlassIcon,
   MoonIcon,
   SunIcon,
-  TimerIcon,
 } from "@phosphor-icons/react"
 
 import { parseYmd, ymd } from "@/lib/time"
@@ -63,9 +62,13 @@ export function TopBar({
     <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border bg-background/80 px-3 backdrop-blur sm:px-4">
       {/* Brand */}
       <div className="flex items-center gap-2">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-          <TimerIcon weight="bold" className="size-5" />
-        </span>
+        <img
+          src="/timebox-icon.webp"
+          alt=""
+          width={32}
+          height={32}
+          className="size-8 shrink-0 object-contain"
+        />
         <span className="hidden font-heading text-lg font-semibold tracking-tight sm:inline">
           timeboxd
         </span>

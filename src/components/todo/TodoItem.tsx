@@ -183,8 +183,8 @@ export function TodoItem({
           ref={setNodeRef}
           style={style}
           className={cn(
-            "group/item flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 shadow-xs transition-shadow",
-            isDragging && "z-10 opacity-60 shadow-md"
+            "group/item flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 shadow-[var(--elevation-low)] transition-shadow",
+            isDragging && "z-10 opacity-60 shadow-[var(--elevation-high)]"
           )}
         >
           <button

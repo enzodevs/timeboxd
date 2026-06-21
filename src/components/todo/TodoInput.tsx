@@ -82,7 +82,7 @@ export function TodoInput({ date }: { date: string }) {
           }
         }}
         placeholder="Add to-do, #tag, -d for deep work, @8am-9am for time"
-        className="h-10 w-full rounded-lg border border-border bg-card pr-9 pl-3 text-sm shadow-xs transition outline-none placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+        className="h-10 w-full rounded-lg border border-border bg-muted/40 pr-9 pl-3 text-sm shadow-[var(--sunken)] transition outline-none placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-primary/20"
       />
       <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
         N

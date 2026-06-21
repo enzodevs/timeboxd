@@ -270,10 +270,10 @@ export function Timebox({
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            "group/box absolute overflow-hidden rounded-lg border py-1 pr-2 pl-3 text-left shadow-sm transition select-none",
+            "group/box absolute overflow-hidden rounded-lg border py-1 pr-2 pl-3 text-left shadow-[var(--elevation-low)] transition select-none",
         draft
-          ? "z-30 cursor-grabbing shadow-md"
-          : "cursor-grab hover:shadow-md",
+          ? "z-30 cursor-grabbing shadow-[var(--elevation-high)]"
+          : "cursor-grab hover:shadow-[var(--elevation-high)]",
         box.completed && "opacity-60"
       )}
       style={{

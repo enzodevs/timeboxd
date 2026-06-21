@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
-import { AppShell } from "@/components/layout/AppShell"
-
-export const Route = createFileRoute("/")({ component: App })
-
-function App() {
-  return <AppShell />
-}
+// The marketing landing page is the host front page; the app lives at /app.
+export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    throw redirect({ to: "/landing" })
+  },
+})

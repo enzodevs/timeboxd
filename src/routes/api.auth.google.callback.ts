@@ -13,15 +13,15 @@ export const Route = createFileRoute("/api/auth/google/callback")({
         )
 
         if (error || !code) {
-          return Response.redirect(`${base}/?google=error`, 302)
+          return Response.redirect(`${base}/app?google=error`, 302)
         }
         try {
           // Dynamic import keeps the database/Node-only code out of the client bundle.
           const { connectWithCode } = await import("@/server/google-connect")
           await connectWithCode(code)
-          return Response.redirect(`${base}/?google=connected`, 302)
+          return Response.redirect(`${base}/app?google=connected`, 302)
         } catch {
-          return Response.redirect(`${base}/?google=error`, 302)
+          return Response.redirect(`${base}/app?google=error`, 302)
         }
       },
     },
