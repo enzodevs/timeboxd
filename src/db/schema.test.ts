@@ -12,20 +12,37 @@ const db = drizzle(client, { schema })
 
 beforeAll(async () => {
   const dir = path.resolve("drizzle")
-  const file = fs.readdirSync(dir).find((f) => f.endsWith(".sql"))
-  if (!file) throw new Error("no migration found — run pnpm db:generate")
-  const sql = fs.readFileSync(path.join(dir, file), "utf8")
-  for (const stmt of sql.split("--> statement-breakpoint")) {
-    const s = stmt.trim()
-    if (s) await client.execute(s)
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+  if (files.length === 0)
+    throw new Error("no migration found - run pnpm db:generate")
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(dir, file), "utf8")
+    for (const stmt of sql.split("--> statement-breakpoint")) {
+      const s = stmt.trim()
+      if (s) await client.execute(s)
+    }
   }
+
+  await db.insert(schema.user).values({
+    id: "u1",
+    name: "Owner",
+    email: "owner@example.com",
+    emailVerified: true,
+  })
 })
 
 describe("schema round trip", () => {
   it("stores tags as JSON and booleans correctly", async () => {
-    await db
-      .insert(schema.tasks)
-      .values({ id: "t1", title: "Hello", tags: ["x", "y"], deepWork: true })
+    await db.insert(schema.tasks).values({
+      id: "t1",
+      userId: "u1",
+      title: "Hello",
+      tags: ["x", "y"],
+      deepWork: true,
+    })
     const [row] = await db
       .select()
       .from(schema.tasks)
@@ -40,22 +57,32 @@ describe("schema round trip", () => {
   it("upserts a per-day note", async () => {
     await db
       .insert(schema.notes)
-      .values({ date: "2026-06-20", content: { type: "doc" }, text: "hi" })
+      .values({
+        userId: "u1",
+        date: "2026-06-20",
+        content: { type: "doc" },
+        text: "hi",
+      })
       .onConflictDoUpdate({
-        target: schema.notes.date,
+        target: [schema.notes.userId, schema.notes.date],
         set: { text: "updated" },
       })
     await db
       .insert(schema.notes)
-      .values({ date: "2026-06-20", content: { type: "doc" }, text: "second" })
+      .values({
+        userId: "u1",
+        date: "2026-06-20",
+        content: { type: "doc" },
+        text: "second",
+      })
       .onConflictDoUpdate({
-        target: schema.notes.date,
+        target: [schema.notes.userId, schema.notes.date],
         set: { text: "second" },
       })
     const [row] = await db
       .select()
       .from(schema.notes)
-      .where(eq(schema.notes.date, "2026-06-20"))
+      .where(eq(schema.notes.userId, "u1"))
     expect(row?.text).toBe("second")
   })
 })

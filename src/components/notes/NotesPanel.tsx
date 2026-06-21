@@ -13,7 +13,13 @@ import type { JsonValue } from "@/db/schema"
 import { useNote, useSaveNote } from "@/hooks/use-notes"
 import { EditorToolbar } from "./EditorToolbar"
 
-export function NotesPanel({ date }: { date: string }) {
+export function NotesPanel({
+  date,
+  readOnly,
+}: {
+  date: string
+  readOnly?: boolean
+}) {
   const { data: note, isFetching } = useNote(date)
   const save = useSaveNote(date)
 
@@ -27,10 +33,12 @@ export function NotesPanel({ date }: { date: string }) {
       StarterKit,
       Placeholder.configure({ placeholder: "Braindump here..." }),
     ],
+    editable: !readOnly,
     editorProps: {
       attributes: { class: "tiptap min-h-[calc(100%-1rem)] px-4 py-3" },
     },
     onUpdate: ({ editor: ed }) => {
+      if (readOnly) return
       if (applying.current) return
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
@@ -55,6 +63,10 @@ export function NotesPanel({ date }: { date: string }) {
     editor.commands.setContent((note?.content as JSONContent | undefined) ?? "")
     applying.current = false
   }, [editor, date, isFetching, note])
+
+  React.useEffect(() => {
+    editor?.setEditable(!readOnly)
+  }, [editor, readOnly])
 
   // Flush a pending save when switching days or unmounting.
   React.useEffect(() => {
@@ -87,10 +99,12 @@ export function NotesPanel({ date }: { date: string }) {
           </button>
         </div>
       </header>
-      {editor && <EditorToolbar editor={editor} />}
+      {editor && !readOnly ? <EditorToolbar editor={editor} /> : null}
       <div
         className="min-h-0 flex-1 cursor-text overflow-y-auto"
-        onClick={() => editor?.chain().focus().run()}
+        onClick={() => {
+          if (!readOnly) editor?.chain().focus().run()
+        }}
       >
         <EditorContent editor={editor} className="h-full" />
       </div>

@@ -19,12 +19,14 @@ interface TodoLaterPanelProps {
   date: string
   googleConnected?: boolean
   onViewInGoogle?: (task: Task) => void
+  readOnly?: boolean
 }
 
 export function TodoLaterPanel({
   date,
   googleConnected,
   onViewInGoogle,
+  readOnly,
 }: TodoLaterPanelProps) {
   const { data } = useTasks(date)
   const later = data?.later ?? []
@@ -47,6 +49,7 @@ export function TodoLaterPanel({
           date={date}
           googleConnected={googleConnected}
           onViewInGoogle={onViewInGoogle}
+          readOnly={readOnly}
           empty={<EmptyLater />}
         />
       </div>

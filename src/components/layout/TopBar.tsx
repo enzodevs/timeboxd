@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { useTheme } from "next-themes"
 import {
@@ -8,9 +9,11 @@ import {
   GearSixIcon,
   MagnifyingGlassIcon,
   MoonIcon,
+  SignOutIcon,
   SunIcon,
 } from "@phosphor-icons/react"
 
+import { signOut } from "@/lib/auth-client"
 import { parseYmd, ymd } from "@/lib/time"
 import { cn } from "@/lib/utils"
 import { clearGhosttyTheme } from "@/themes/ghostty-theme"
@@ -44,6 +47,7 @@ export function TopBar({
   onOpenSettings,
   googleConnected,
 }: TopBarProps) {
+  const navigate = useNavigate()
   const { resolvedTheme, setTheme } = useTheme()
   const [calOpen, setCalOpen] = React.useState(false)
   const d = parseYmd(date)
@@ -56,6 +60,11 @@ export function TopBar({
     // Quick toggle returns to the built-in light/dark theme.
     clearGhosttyTheme()
     setTheme(resolvedTheme === "dark" ? "light" : "dark")
+  }
+
+  const logout = async () => {
+    await signOut()
+    await navigate({ to: "/login", search: { redirect: "/app" } })
   }
 
   return (
@@ -181,6 +190,14 @@ export function TopBar({
           {googleConnected ? (
             <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
           ) : null}
+        </button>
+        <button
+          type="button"
+          aria-label="Sign out"
+          onClick={() => void logout()}
+          className={iconBtn}
+        >
+          <SignOutIcon className="size-4" />
         </button>
       </div>
     </header>

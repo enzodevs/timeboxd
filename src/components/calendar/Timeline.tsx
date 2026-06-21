@@ -27,6 +27,7 @@ interface TimelineProps {
   gridRef: React.RefObject<HTMLDivElement | null>
   googleConnected?: boolean
   onViewInGoogle?: (box: TimeboxRow) => void
+  readOnly?: boolean
 }
 
 export function Timeline({
@@ -34,6 +35,7 @@ export function Timeline({
   gridRef,
   googleConnected,
   onViewInGoogle,
+  readOnly,
 }: TimelineProps) {
   const { data: boxes = [] } = useTimeboxes(date)
   const { data: external = [] } = useGoogleEvents(
@@ -42,7 +44,10 @@ export function Timeline({
   )
   const { create } = useTimeboxMutations(date)
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const { setNodeRef } = useDroppable({ id: CALENDAR_DROPPABLE })
+  const { setNodeRef } = useDroppable({
+    id: CALENDAR_DROPPABLE,
+    disabled: readOnly,
+  })
   const isToday = date === ymd(new Date())
 
   const setGridRef = (node: HTMLDivElement | null) => {
@@ -74,6 +79,7 @@ export function Timeline({
   )
 
   const createAt = (clientY: number) => {
+    if (readOnly) return
     const rect = gridRef.current?.getBoundingClientRect()
     if (!rect) return
     const min = clamp(
@@ -116,7 +122,7 @@ export function Timeline({
           ref={setGridRef}
           className="absolute top-0 right-3 bottom-0"
           style={{ left: GUTTER }}
-          onDoubleClick={(e) => createAt(e.clientY)}
+          onDoubleClick={readOnly ? undefined : (e) => createAt(e.clientY)}
         >
           {/* read-only Google Calendar events underlay */}
           {external.map((ev) => {
@@ -149,6 +155,7 @@ export function Timeline({
               cols={p.cols}
               googleConnected={googleConnected}
               onViewInGoogle={onViewInGoogle}
+              readOnly={readOnly}
             />
           ))}
           {isToday && <NowIndicator pxPerHour={PX_PER_HOUR} />}

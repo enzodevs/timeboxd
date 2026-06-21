@@ -12,6 +12,7 @@ interface SortableTaskListProps {
   empty: React.ReactNode
   googleConnected?: boolean
   onViewInGoogle?: (task: Task) => void
+  readOnly?: boolean
   className?: string
 }
 
@@ -22,9 +23,14 @@ export function SortableTaskList({
   empty,
   googleConnected,
   onViewInGoogle,
+  readOnly,
   className,
 }: SortableTaskListProps) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { containerId: id } })
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: { containerId: id },
+    disabled: readOnly,
+  })
 
   return (
     <SortableContext
@@ -50,6 +56,7 @@ export function SortableTaskList({
                 containerId={id}
                 googleConnected={googleConnected}
                 onViewInGoogle={onViewInGoogle}
+                readOnly={readOnly}
               />
             ))}
       </ul>

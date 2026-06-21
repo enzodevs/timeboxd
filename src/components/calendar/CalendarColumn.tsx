@@ -8,6 +8,7 @@ interface CalendarColumnProps {
   gridRef: React.RefObject<HTMLDivElement | null>
   googleConnected?: boolean
   onViewInGoogle?: (box: TimeboxRow) => void
+  readOnly?: boolean
 }
 
 export function CalendarColumn({
@@ -15,6 +16,7 @@ export function CalendarColumn({
   gridRef,
   googleConnected,
   onViewInGoogle,
+  readOnly,
 }: CalendarColumnProps) {
   return (
     <section className="flex h-full min-h-0 flex-col bg-background">
@@ -23,6 +25,7 @@ export function CalendarColumn({
         gridRef={gridRef}
         googleConnected={googleConnected}
         onViewInGoogle={onViewInGoogle}
+        readOnly={readOnly}
       />
     </section>
   )

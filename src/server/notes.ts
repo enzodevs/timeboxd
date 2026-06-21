@@ -1,36 +1,44 @@
 import { createServerFn } from "@tanstack/react-start"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 
 import { db } from "@/db/client"
 import { ensureDb } from "@/db/migrate"
 import { notes } from "@/db/schema"
 import type { JsonValue, Note } from "@/db/schema"
+import { authMiddleware } from "@/lib/auth-middleware"
+import { subscriptionMiddleware } from "@/lib/subscription-middleware"
 
 export const getNote = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
   .validator((d: { date: string }) => d)
-  .handler(async ({ data }): Promise<Note | null> => {
+  .handler(async ({ data, context }): Promise<Note | null> => {
     await ensureDb()
-    const [row] = await db.select().from(notes).where(eq(notes.date, data.date))
+    const [row] = await db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.userId, context.userId), eq(notes.date, data.date)))
     return row ?? null
   })
 
 export const saveNote = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator(
     (d: { date: string; content: JsonValue | null; text: string }) => d
   )
-  .handler(async ({ data }): Promise<Note> => {
+  .handler(async ({ data, context }): Promise<Note> => {
     await ensureDb()
     const updatedAt = new Date().toISOString()
     const [row] = await db
       .insert(notes)
       .values({
+        userId: context.userId,
         date: data.date,
         content: data.content,
         text: data.text,
         updatedAt,
       })
       .onConflictDoUpdate({
-        target: notes.date,
+        target: [notes.userId, notes.date],
         set: { content: data.content, text: data.text, updatedAt },
       })
       .returning()

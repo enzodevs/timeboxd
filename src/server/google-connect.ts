@@ -10,7 +10,10 @@ import { getPrimaryEmail } from "@/lib/google/api"
  * database/Node imports never leak into the client bundle. Loaded via dynamic
  * import from the OAuth callback route.
  */
-export async function connectWithCode(code: string): Promise<void> {
+export async function connectWithCode(
+  userId: string,
+  code: string
+): Promise<void> {
   await ensureDb()
   const client = createOAuthClient()
   const { tokens } = await client.getToken(code)
@@ -20,7 +23,8 @@ export async function connectWithCode(code: string): Promise<void> {
   await db
     .insert(integrations)
     .values({
-      id: "google",
+      userId,
+      provider: "google",
       accessToken: tokens.access_token ?? null,
       refreshToken: tokens.refresh_token ?? null,
       expiresAt: tokens.expiry_date ?? null,
@@ -33,7 +37,7 @@ export async function connectWithCode(code: string): Promise<void> {
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: integrations.id,
+      target: [integrations.userId, integrations.provider],
       set: {
         accessToken: tokens.access_token ?? null,
         ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),

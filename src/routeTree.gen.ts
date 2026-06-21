@@ -9,11 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api.auth.google.callback'
 
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LandingRoute = LandingRouteImport.update({
   id: '/landing',
   path: '/landing',
@@ -29,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
   id: '/api/auth/google/callback',
   path: '/api/auth/google/callback',
@@ -39,12 +57,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
@@ -52,25 +76,67 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/landing' | '/api/auth/google/callback'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/landing'
+    | '/login'
+    | '/pricing'
+    | '/api/auth/$'
+    | '/api/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/landing' | '/api/auth/google/callback'
-  id: '__root__' | '/' | '/app' | '/landing' | '/api/auth/google/callback'
+  to:
+    | '/'
+    | '/app'
+    | '/landing'
+    | '/login'
+    | '/pricing'
+    | '/api/auth/$'
+    | '/api/auth/google/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/landing'
+    | '/login'
+    | '/pricing'
+    | '/api/auth/$'
+    | '/api/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   LandingRoute: typeof LandingRoute
+  LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/landing': {
       id: '/landing'
       path: '/landing'
@@ -92,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/google/callback': {
       id: '/api/auth/google/callback'
       path: '/api/auth/google/callback'
@@ -106,6 +179,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   LandingRoute: LandingRoute,
+  LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

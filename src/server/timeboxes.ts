@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start"
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { db } from "@/db/client"
 import { ensureDb } from "@/db/migrate"
 import { timeboxes } from "@/db/schema"
 import type { Timebox } from "@/db/schema"
+import { authMiddleware } from "@/lib/auth-middleware"
+import { subscriptionMiddleware } from "@/lib/subscription-middleware"
 
 const nowISO = () => new Date().toISOString()
 
@@ -34,24 +36,29 @@ const patchInput = z.object({
 })
 
 export const listTimeboxes = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
   .validator((d: { date: string }) => d)
-  .handler(async ({ data }): Promise<Timebox[]> => {
+  .handler(async ({ data, context }): Promise<Timebox[]> => {
     await ensureDb()
     return db
       .select()
       .from(timeboxes)
-      .where(eq(timeboxes.date, data.date))
+      .where(
+        and(eq(timeboxes.date, data.date), eq(timeboxes.userId, context.userId))
+      )
       .orderBy(asc(timeboxes.start))
   })
 
 export const createTimebox = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: z.input<typeof createInput>) => createInput.parse(d))
-  .handler(async ({ data }): Promise<Timebox> => {
+  .handler(async ({ data, context }): Promise<Timebox> => {
     await ensureDb()
     const [row] = await db
       .insert(timeboxes)
       .values({
         id: crypto.randomUUID(),
+        userId: context.userId,
         title: data.title,
         start: data.start,
         end: data.end,
@@ -67,11 +74,12 @@ export const createTimebox = createServerFn({ method: "POST" })
   })
 
 export const updateTimebox = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { id: string; patch: z.input<typeof patchInput> }) => ({
     id: z.string().parse(d.id),
     patch: patchInput.parse(d.patch),
   }))
-  .handler(async ({ data }): Promise<Timebox> => {
+  .handler(async ({ data, context }): Promise<Timebox> => {
     await ensureDb()
     const patch = { ...data.patch } as Record<string, unknown>
     if (data.patch.completed !== undefined) {
@@ -81,16 +89,23 @@ export const updateTimebox = createServerFn({ method: "POST" })
     const [row] = await db
       .update(timeboxes)
       .set(patch)
-      .where(eq(timeboxes.id, data.id))
+      .where(
+        and(eq(timeboxes.id, data.id), eq(timeboxes.userId, context.userId))
+      )
       .returning()
     if (!row) throw new Error("Timebox not found")
     return row
   })
 
 export const deleteTimebox = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { id: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await ensureDb()
-    await db.delete(timeboxes).where(eq(timeboxes.id, data.id))
+    await db
+      .delete(timeboxes)
+      .where(
+        and(eq(timeboxes.id, data.id), eq(timeboxes.userId, context.userId))
+      )
     return { ok: true }
   })

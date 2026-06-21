@@ -10,7 +10,13 @@ function hhmmToMin(hhmm: string): number {
   return h * 60 + m
 }
 
-export function TodoInput({ date }: { date: string }) {
+export function TodoInput({
+  date,
+  readOnly,
+}: {
+  date: string
+  readOnly?: boolean
+}) {
   const [value, setValue] = React.useState("")
   const inputRef = React.useRef<HTMLInputElement>(null)
   const { create } = useTaskMutations(date)
@@ -20,6 +26,7 @@ export function TodoInput({ date }: { date: string }) {
   React.useEffect(() => {
     const focus = () => inputRef.current?.focus()
     const handler = (e: KeyboardEvent) => {
+      if (readOnly) return
       if (e.key.toLowerCase() !== "n") return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const el = document.activeElement
@@ -38,9 +45,10 @@ export function TodoInput({ date }: { date: string }) {
       window.removeEventListener("keydown", handler)
       window.removeEventListener("timeboxd:focus-new-task", focus)
     }
-  }, [])
+  }, [readOnly])
 
   const submit = async () => {
+    if (readOnly) return
     const parsed = parseTaskInput(value)
     if (!parsed.title) return
     setValue("")
@@ -72,6 +80,7 @@ export function TodoInput({ date }: { date: string }) {
       <input
         ref={inputRef}
         value={value}
+        disabled={readOnly}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -81,12 +90,18 @@ export function TodoInput({ date }: { date: string }) {
             inputRef.current?.blur()
           }
         }}
-        placeholder="Add to-do, #tag, -d for deep work, @8am-9am for time"
+        placeholder={
+          readOnly
+            ? "Read-only until your subscription is active"
+            : "Add to-do, #tag, -d for deep work, @8am-9am for time"
+        }
         className="h-10 w-full rounded-lg border border-border bg-muted/40 pr-9 pl-3 text-sm shadow-[var(--sunken)] transition outline-none placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-primary/20"
       />
-      <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-        N
-      </kbd>
+      {readOnly ? null : (
+        <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+          N
+        </kbd>
+      )}
     </div>
   )
 }

@@ -5,16 +5,22 @@ import { useTasks } from "@/hooks/use-tasks"
 import { TodoInput } from "./TodoInput"
 import { SortableTaskList } from "./SortableTaskList"
 
-function EmptyToday() {
+function EmptyToday({ readOnly }: { readOnly?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-4 py-12 text-center text-sm text-muted-foreground">
       <CursorClickIcon className="size-7 text-primary/70" />
       <p className="max-w-[18rem] leading-relaxed">
-        Press the{" "}
-        <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">
-          N
-        </kbd>{" "}
-        key to add a new to-do for today
+        {readOnly ? (
+          "No to-dos for this day"
+        ) : (
+          <>
+            Press the{" "}
+            <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">
+              N
+            </kbd>{" "}
+            key to add a new to-do for today
+          </>
+        )}
       </p>
     </div>
   )
@@ -24,12 +30,14 @@ interface TodoPanelProps {
   date: string
   googleConnected?: boolean
   onViewInGoogle?: (task: Task) => void
+  readOnly?: boolean
 }
 
 export function TodoPanel({
   date,
   googleConnected,
   onViewInGoogle,
+  readOnly,
 }: TodoPanelProps) {
   const { data } = useTasks(date)
   const today = data?.today ?? []
@@ -45,7 +53,7 @@ export function TodoPanel({
           </span>
         )}
       </div>
-      <TodoInput date={date} />
+      <TodoInput date={date} readOnly={readOnly} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <SortableTaskList
           id="today"
@@ -53,7 +61,8 @@ export function TodoPanel({
           date={date}
           googleConnected={googleConnected}
           onViewInGoogle={onViewInGoogle}
-          empty={<EmptyToday />}
+          readOnly={readOnly}
+          empty={<EmptyToday readOnly={readOnly} />}
         />
       </div>
     </section>

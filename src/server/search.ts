@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start"
-import { and, desc, isNotNull, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 
 import { db } from "@/db/client"
 import { ensureDb } from "@/db/migrate"
 import { notes, tasks, timeboxes } from "@/db/schema"
+import { authMiddleware } from "@/lib/auth-middleware"
 
 export interface SearchHit {
   type: "task" | "timebox" | "note"
@@ -55,8 +56,9 @@ function snippet(text: string, q: string): string {
  * virtual table (or sqlite-vss for semantic search) without touching callers.
  */
 export const searchAll = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
   .validator((d: { q: string }) => d)
-  .handler(async ({ data }): Promise<SearchResults> => {
+  .handler(async ({ data, context }): Promise<SearchResults> => {
     const q = data.q.trim()
     if (!q) return { tasks: [], timeboxes: [], notes: [], total: 0 }
     await ensureDb()
@@ -69,19 +71,27 @@ export const searchAll = createServerFn({ method: "GET" })
       db
         .select()
         .from(tasks)
-        .where(matches(tasks.title))
+        .where(and(eq(tasks.userId, context.userId), matches(tasks.title)))
         .orderBy(desc(tasks.updatedAt))
         .limit(LIMIT),
       db
         .select()
         .from(timeboxes)
-        .where(matches(timeboxes.title))
+        .where(
+          and(eq(timeboxes.userId, context.userId), matches(timeboxes.title))
+        )
         .orderBy(desc(timeboxes.start))
         .limit(LIMIT),
       db
         .select()
         .from(notes)
-        .where(and(isNotNull(notes.text), matches(notes.text)))
+        .where(
+          and(
+            eq(notes.userId, context.userId),
+            isNotNull(notes.text),
+            matches(notes.text)
+          )
+        )
         .orderBy(desc(notes.updatedAt))
         .limit(LIMIT),
     ])

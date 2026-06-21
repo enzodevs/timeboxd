@@ -11,9 +11,11 @@ import {
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useQueryClient } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import type { Task, Timebox } from "@/db/schema"
+import type { AccessState } from "@/server/billing"
 import { CALENDAR_DROPPABLE } from "@/lib/dnd"
 import {
   DAY_MINUTES,
@@ -39,11 +41,12 @@ import { NotesPanel } from "@/components/notes/NotesPanel"
 import { SettingsDialog } from "@/components/settings/SettingsDialog"
 import { TopBar } from "@/components/layout/TopBar"
 import { CommandPalette } from "@/components/search/CommandPalette"
+import { BorderBeam } from "@/components/magicui/border-beam"
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v))
 
-export function AppShell() {
+export function AppShell({ access }: { access: AccessState }) {
   const qc = useQueryClient()
   const [date, setDate] = React.useState(() => ymd(new Date()))
   const [settingsOpen, setSettingsOpen] = React.useState(false)
@@ -55,6 +58,7 @@ export function AppShell() {
   const { data: google } = useGoogleStatus()
   const { pushTimebox } = useGoogleActions()
   const googleConnected = Boolean(google?.connected)
+  const readOnly = !access.hasActiveAccess
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -69,6 +73,8 @@ export function AppShell() {
       void qc.invalidateQueries({ queryKey: ["google"] })
     } else if (g === "error") {
       toast.error("Google connection failed")
+    } else if (g === "subscription") {
+      toast.error("An active subscription is required for Google sync")
     }
     if (g) window.history.replaceState({}, "", window.location.pathname)
   }, [qc])
@@ -109,6 +115,10 @@ export function AppShell() {
   }
 
   const createTimeboxFromDrop = (task: Task, e: DragEndEvent) => {
+    if (readOnly) {
+      toast.error("Upgrade to edit your workspace")
+      return
+    }
     const rect = gridRef.current?.getBoundingClientRect()
     let minutes = new Date().getHours() * 60
     if (rect) {
@@ -133,6 +143,7 @@ export function AppShell() {
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveTask(null)
+    if (readOnly) return
     const { active, over } = e
     if (!over) return
 
@@ -229,6 +240,10 @@ export function AppShell() {
   }
 
   const viewBoxInGoogle = (box: Timebox) => {
+    if (readOnly) {
+      toast.error("An active subscription is required for Google sync")
+      return
+    }
     toast.promise(
       pushTimebox.mutateAsync(box.id).then((r) => {
         if (r.htmlLink) window.open(r.htmlLink, "_blank")
@@ -254,24 +269,41 @@ export function AppShell() {
         googleConnected={googleConnected}
       />
 
+      {readOnly ? (
+        <div className="bg-background px-3 pt-3">
+          <div className="tb-card relative overflow-hidden rounded-lg border border-primary/30 bg-card px-3 py-2.5 shadow-[var(--elevation-low)]">
+            <BorderBeam duration={9} borderWidth={1.5} />
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium">Read-only access</span>
+              <span className="text-muted-foreground">
+                Your data is safe. Upgrade to create, edit, and sync again.
+              </span>
+              <Link
+                to="/pricing"
+                className="ml-auto rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/80"
+              >
+                Upgrade
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
+        onDragStart={readOnly ? undefined : onDragStart}
+        onDragEnd={readOnly ? undefined : onDragEnd}
       >
         <ResizablePanelGroup orientation="horizontal" className="flex-1">
-          <ResizablePanel
-            defaultSize="27%"
-            minSize="260px"
-            className="min-w-0"
-          >
+          <ResizablePanel defaultSize="27%" minSize="260px" className="min-w-0">
             <ResizablePanelGroup orientation="vertical">
               <ResizablePanel defaultSize="62%" minSize="160px">
                 <TodoPanel
                   date={date}
                   googleConnected={googleConnected}
                   onViewInGoogle={viewTaskInGoogle}
+                  readOnly={readOnly}
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
@@ -280,6 +312,7 @@ export function AppShell() {
                   date={date}
                   googleConnected={googleConnected}
                   onViewInGoogle={viewTaskInGoogle}
+                  readOnly={readOnly}
                 />
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -287,27 +320,20 @@ export function AppShell() {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel
-            defaultSize="45%"
-            minSize="420px"
-            className="min-w-0"
-          >
+          <ResizablePanel defaultSize="45%" minSize="420px" className="min-w-0">
             <CalendarColumn
               date={date}
               gridRef={gridRef}
               googleConnected={googleConnected}
               onViewInGoogle={viewBoxInGoogle}
+              readOnly={readOnly}
             />
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel
-            defaultSize="28%"
-            minSize="280px"
-            className="min-w-0"
-          >
-            <NotesPanel date={date} />
+          <ResizablePanel defaultSize="28%" minSize="280px" className="min-w-0">
+            <NotesPanel date={date} readOnly={readOnly} />
           </ResizablePanel>
         </ResizablePanelGroup>
 
@@ -329,7 +355,11 @@ export function AppShell() {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        readOnly={readOnly}
+      />
     </div>
   )
 }

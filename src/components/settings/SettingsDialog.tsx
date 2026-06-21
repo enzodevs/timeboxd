@@ -1,7 +1,10 @@
 import { useTheme } from "next-themes"
+import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import {
+  ArrowSquareOutIcon,
   CheckCircleIcon,
+  CreditCardIcon,
   DesktopIcon,
   DownloadSimpleIcon,
   GoogleLogoIcon,
@@ -11,6 +14,7 @@ import {
 } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
+import { useBillingStatus } from "@/hooks/use-billing"
 import { useGoogleActions, useGoogleStatus } from "@/hooks/use-google"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,13 +36,21 @@ const themes = [
 export function SettingsDialog({
   open,
   onOpenChange,
+  readOnly,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  readOnly?: boolean
 }) {
   const { theme, setTheme } = useTheme()
   const { data: status } = useGoogleStatus()
+  const { data: billing } = useBillingStatus()
   const { connect, disconnect, importTasks } = useGoogleActions()
+  const subscription = billing?.subscription
+  const planName = billing?.selfHosted
+    ? "Self-hosted"
+    : (subscription?.lsProductName ??
+      (billing?.hasActiveAccess ? "Cloud" : "No active subscription"))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,6 +97,46 @@ export function SettingsDialog({
 
         <section className="space-y-2">
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Billing
+          </h3>
+          <div className="rounded-lg border border-border p-3">
+            <div className="flex items-center gap-2.5">
+              <CreditCardIcon className="size-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{planName}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {billing?.selfHosted
+                    ? "Subscription checks are bypassed on this server"
+                    : billing?.hasActiveAccess
+                      ? "Cloud access is active"
+                      : "Read-only until access is restored"}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {subscription?.customerPortalUrl ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    window.location.href = subscription.customerPortalUrl!
+                  }}
+                >
+                  <ArrowSquareOutIcon />
+                  Manage billing
+                </Button>
+              ) : null}
+              {!billing?.selfHosted ? (
+                <Button size="sm" variant="ghost" asChild>
+                  <Link to="/pricing">View pricing</Link>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Integrations
           </h3>
           <div className="rounded-lg border border-border p-3">
@@ -117,10 +169,15 @@ export function SettingsDialog({
               </p>
             ) : status.connected ? (
               <div className="mt-3 flex flex-wrap gap-2">
+                {readOnly ? (
+                  <p className="basis-full rounded-md bg-muted px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                    Google sync is paused until cloud access is active.
+                  </p>
+                ) : null}
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={importTasks.isPending}
+                  disabled={readOnly || importTasks.isPending}
                   onClick={() =>
                     importTasks.mutate(undefined, {
                       onSuccess: (r) =>
@@ -137,7 +194,7 @@ export function SettingsDialog({
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={disconnect.isPending}
+                  disabled={readOnly || disconnect.isPending}
                   onClick={() =>
                     disconnect.mutate(undefined, {
                       onSuccess: () => toast.success("Disconnected Google"),
@@ -152,7 +209,7 @@ export function SettingsDialog({
               <div className="mt-3">
                 <Button
                   size="sm"
-                  disabled={connect.isPending}
+                  disabled={readOnly || connect.isPending}
                   onClick={() => connect.mutate()}
                 >
                   <GoogleLogoIcon weight="bold" />

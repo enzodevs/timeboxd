@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import type { OAuth2Client } from "google-auth-library"
 
 import { db } from "@/db/client"
@@ -17,21 +17,25 @@ import {
   upsertEvent,
 } from "@/lib/google/api"
 import { DAY_MINUTES, isoFromDayMinutes } from "@/lib/time"
+import { authMiddleware } from "@/lib/auth-middleware"
+import { subscriptionMiddleware } from "@/lib/subscription-middleware"
 
 const nowISO = () => new Date().toISOString()
 
-async function loadIntegration() {
+async function loadIntegration(userId: string) {
   const [row] = await db
     .select()
     .from(integrations)
-    .where(eq(integrations.id, "google"))
+    .where(
+      and(eq(integrations.userId, userId), eq(integrations.provider, "google"))
+    )
   return row ?? null
 }
 
 /** An OAuth client primed with stored tokens (auto-refreshes + persists). */
-async function getAuthedClient(): Promise<OAuth2Client | null> {
+async function getAuthedClient(userId: string): Promise<OAuth2Client | null> {
   if (!googleConfigured()) return null
-  const row = await loadIntegration()
+  const row = await loadIntegration(userId)
   if (!row?.refreshToken) return null
   const client = createOAuthClient()
   client.setCredentials({
@@ -48,15 +52,21 @@ async function getAuthedClient(): Promise<OAuth2Client | null> {
         ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),
         updatedAt: nowISO(),
       })
-      .where(eq(integrations.id, "google"))
+      .where(
+        and(
+          eq(integrations.userId, userId),
+          eq(integrations.provider, "google")
+        )
+      )
   })
   return client
 }
 
-export const getGoogleStatus = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const getGoogleStatus = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
     await ensureDb()
-    const row = await loadIntegration()
+    const row = await loadIntegration(context.userId)
     return {
       configured: googleConfigured(),
       connected: Boolean(row?.refreshToken),
@@ -65,25 +75,31 @@ export const getGoogleStatus = createServerFn({ method: "GET" }).handler(
       calendarId: row?.calendarId ?? "primary",
       taskListId: row?.taskListId ?? "@default",
     }
-  }
-)
+  })
 
-export const getGoogleAuthUrl = createServerFn({ method: "POST" }).handler(
-  async () => {
+export const getGoogleAuthUrl = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
+  .handler(async () => {
     if (!googleConfigured()) {
       throw new Error("Google OAuth is not configured on the server.")
     }
     return { url: buildAuthUrl("timeboxd") }
-  }
-)
+  })
 
-export const disconnectGoogle = createServerFn({ method: "POST" }).handler(
-  async () => {
+export const disconnectGoogle = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
+  .handler(async ({ context }) => {
     await ensureDb()
-    await db.delete(integrations).where(eq(integrations.id, "google"))
+    await db
+      .delete(integrations)
+      .where(
+        and(
+          eq(integrations.userId, context.userId),
+          eq(integrations.provider, "google")
+        )
+      )
     return { ok: true }
-  }
-)
+  })
 
 export interface ExternalEvent {
   id: string
@@ -94,11 +110,12 @@ export interface ExternalEvent {
 }
 
 export const getGoogleEvents = createServerFn({ method: "GET" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { date: string }) => d)
-  .handler(async ({ data }): Promise<ExternalEvent[]> => {
-    const client = await getAuthedClient()
+  .handler(async ({ data, context }): Promise<ExternalEvent[]> => {
+    const client = await getAuthedClient(context.userId)
     if (!client) return []
-    const row = await loadIntegration()
+    const row = await loadIntegration(context.userId)
     const calId = row?.calendarId ?? "primary"
     try {
       const events = await listEvents(
@@ -122,17 +139,20 @@ export const getGoogleEvents = createServerFn({ method: "GET" })
   })
 
 export const pushTimeboxToGoogle = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { id: string }) => d)
-  .handler(async ({ data }): Promise<{ htmlLink: string | null }> => {
+  .handler(async ({ data, context }): Promise<{ htmlLink: string | null }> => {
     await ensureDb()
-    const client = await getAuthedClient()
+    const client = await getAuthedClient(context.userId)
     if (!client) throw new Error("Google is not connected.")
-    const row = await loadIntegration()
+    const row = await loadIntegration(context.userId)
     const calId = row?.calendarId ?? "primary"
     const [box] = await db
       .select()
       .from(timeboxes)
-      .where(eq(timeboxes.id, data.id))
+      .where(
+        and(eq(timeboxes.id, data.id), eq(timeboxes.userId, context.userId))
+      )
     if (!box) throw new Error("Timebox not found.")
     const ev = await upsertEvent(
       client,
@@ -143,16 +163,19 @@ export const pushTimeboxToGoogle = createServerFn({ method: "POST" })
     await db
       .update(timeboxes)
       .set({ googleEventId: ev.id, updatedAt: nowISO() })
-      .where(eq(timeboxes.id, box.id))
+      .where(
+        and(eq(timeboxes.id, box.id), eq(timeboxes.userId, context.userId))
+      )
     return { htmlLink: ev.htmlLink ?? null }
   })
 
-export const importGoogleTasks = createServerFn({ method: "POST" }).handler(
-  async (): Promise<{ imported: number }> => {
+export const importGoogleTasks = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
+  .handler(async ({ context }): Promise<{ imported: number }> => {
     await ensureDb()
-    const client = await getAuthedClient()
+    const client = await getAuthedClient(context.userId)
     if (!client) throw new Error("Google is not connected.")
-    const row = await loadIntegration()
+    const row = await loadIntegration(context.userId)
     const listId = row?.taskListId ?? "@default"
     const gtasks = await listGTasks(client, listId)
     let imported = 0
@@ -161,10 +184,13 @@ export const importGoogleTasks = createServerFn({ method: "POST" }).handler(
       const [existing] = await db
         .select()
         .from(tasks)
-        .where(eq(tasks.googleTaskId, gt.id))
+        .where(
+          and(eq(tasks.googleTaskId, gt.id), eq(tasks.userId, context.userId))
+        )
       if (existing) continue
       await db.insert(tasks).values({
         id: crypto.randomUUID(),
+        userId: context.userId,
         title: gt.title,
         list: "later",
         date: null,
@@ -174,18 +200,23 @@ export const importGoogleTasks = createServerFn({ method: "POST" }).handler(
       imported++
     }
     return { imported }
-  }
-)
+  })
 
-export const getGoogleLists = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ taskLists: { id: string; title: string }[] }> => {
-    const client = await getAuthedClient()
-    if (!client) return { taskLists: [] }
-    try {
-      const lists = await listTaskLists(client)
-      return { taskLists: lists.map((l) => ({ id: l.id, title: l.title })) }
-    } catch {
-      return { taskLists: [] }
+export const getGoogleLists = createServerFn({ method: "GET" })
+  .middleware([subscriptionMiddleware])
+  .handler(
+    async ({
+      context,
+    }): Promise<{
+      taskLists: { id: string; title: string }[]
+    }> => {
+      const client = await getAuthedClient(context.userId)
+      if (!client) return { taskLists: [] }
+      try {
+        const lists = await listTaskLists(client)
+        return { taskLists: lists.map((l) => ({ id: l.id, title: l.title })) }
+      } catch {
+        return { taskLists: [] }
+      }
     }
-  }
-)
+  )

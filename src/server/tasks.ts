@@ -6,6 +6,8 @@ import { db } from "@/db/client"
 import { ensureDb } from "@/db/migrate"
 import { tasks } from "@/db/schema"
 import type { Task } from "@/db/schema"
+import { authMiddleware } from "@/lib/auth-middleware"
+import { subscriptionMiddleware } from "@/lib/subscription-middleware"
 
 const nowISO = () => new Date().toISOString()
 
@@ -35,26 +37,36 @@ export type TaskLists = { today: Task[]; later: Task[] }
 
 /** Returns the dated "today" list plus the undated "later" backlog. */
 export const listTasks = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
   .validator((d: { date: string }) => d)
-  .handler(async ({ data }): Promise<TaskLists> => {
+  .handler(async ({ data, context }): Promise<TaskLists> => {
     await ensureDb()
+    const { userId } = context
     const today = await db
       .select()
       .from(tasks)
-      .where(and(eq(tasks.list, "today"), eq(tasks.date, data.date)))
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          eq(tasks.list, "today"),
+          eq(tasks.date, data.date)
+        )
+      )
       .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     const later = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.list, "later"))
+      .where(and(eq(tasks.userId, userId), eq(tasks.list, "later")))
       .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     return { today, later }
   })
 
 export const createTask = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: z.input<typeof createInput>) => createInput.parse(d))
-  .handler(async ({ data }): Promise<Task> => {
+  .handler(async ({ data, context }): Promise<Task> => {
     await ensureDb()
+    const { userId } = context
     const list = data.list ?? "today"
     const date = list === "later" ? null : (data.date ?? null)
     const agg = await db
@@ -62,14 +74,19 @@ export const createTask = createServerFn({ method: "POST" })
       .from(tasks)
       .where(
         list === "later"
-          ? eq(tasks.list, "later")
-          : and(eq(tasks.list, "today"), eq(tasks.date, date as string))
+          ? and(eq(tasks.userId, userId), eq(tasks.list, "later"))
+          : and(
+              eq(tasks.userId, userId),
+              eq(tasks.list, "today"),
+              eq(tasks.date, date as string)
+            )
       )
     const maxOrder = agg[0]?.max ?? -1
     const [row] = await db
       .insert(tasks)
       .values({
         id: crypto.randomUUID(),
+        userId,
         title: data.title,
         tags: data.tags ?? [],
         deepWork: data.deepWork ?? false,
@@ -84,12 +101,14 @@ export const createTask = createServerFn({ method: "POST" })
   })
 
 export const updateTask = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { id: string; patch: z.input<typeof patchInput> }) => ({
     id: z.string().parse(d.id),
     patch: patchInput.parse(d.patch),
   }))
-  .handler(async ({ data }): Promise<Task> => {
+  .handler(async ({ data, context }): Promise<Task> => {
     await ensureDb()
+    const { userId } = context
     const patch = { ...data.patch } as Record<string, unknown>
     if (data.patch.completed !== undefined) {
       patch.completedAt = data.patch.completed ? nowISO() : null
@@ -98,7 +117,7 @@ export const updateTask = createServerFn({ method: "POST" })
     const [row] = await db
       .update(tasks)
       .set(patch)
-      .where(eq(tasks.id, data.id))
+      .where(and(eq(tasks.id, data.id), eq(tasks.userId, userId)))
       .returning()
     if (!row) throw new Error("Task not found")
     return row
@@ -106,6 +125,7 @@ export const updateTask = createServerFn({ method: "POST" })
 
 /** Batch update used for drag reordering and moving between lists. */
 export const reorderTasks = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator(
     (d: {
       updates: Array<{
@@ -116,8 +136,9 @@ export const reorderTasks = createServerFn({ method: "POST" })
       }>
     }) => d
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await ensureDb()
+    const { userId } = context
     for (const u of data.updates) {
       const set: Record<string, unknown> = {
         sortOrder: u.sortOrder,
@@ -125,27 +146,39 @@ export const reorderTasks = createServerFn({ method: "POST" })
       }
       if (u.list !== undefined) set.list = u.list
       if (u.date !== undefined) set.date = u.list === "later" ? null : u.date
-      await db.update(tasks).set(set).where(eq(tasks.id, u.id))
+      await db
+        .update(tasks)
+        .set(set)
+        .where(and(eq(tasks.id, u.id), eq(tasks.userId, userId)))
     }
     return { ok: true }
   })
 
 export const deleteTask = createServerFn({ method: "POST" })
+  .middleware([subscriptionMiddleware])
   .validator((d: { id: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await ensureDb()
-    await db.delete(tasks).where(eq(tasks.id, data.id))
+    await db
+      .delete(tasks)
+      .where(and(eq(tasks.id, data.id), eq(tasks.userId, context.userId)))
     return { ok: true }
   })
 
 /** Used by Google Tasks import to avoid duplicating already-synced tasks. */
 export const findTaskByGoogleId = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
   .validator((d: { googleTaskId: string }) => d)
-  .handler(async ({ data }): Promise<Task | null> => {
+  .handler(async ({ data, context }): Promise<Task | null> => {
     await ensureDb()
     const [row] = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.googleTaskId, data.googleTaskId))
+      .where(
+        and(
+          eq(tasks.googleTaskId, data.googleTaskId),
+          eq(tasks.userId, context.userId)
+        )
+      )
     return row ?? null
   })
