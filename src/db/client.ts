@@ -1,25 +1,27 @@
-import { existsSync, mkdirSync } from "node:fs"
-import { dirname } from "node:path"
 import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 
 import * as schema from "./schema"
 
+// IMPORTANT: keep this module free of `node:*` imports and top-level side effects.
+// It gets pulled into the client bundle (via server-fn `.middleware()` references),
+// where TanStack Start mocks node built-ins — a top-level `node:path`/`node:fs` call
+// here throws during hydration and silently blanks the whole app. Local-directory
+// creation lives in db/migrate.ts (server-only, dynamic import).
 const url = process.env.DATABASE_URL ?? "file:./data/timeboxd.db"
 
-// Ensure the parent directory exists for local file-based databases.
-if (url.startsWith("file:")) {
-  const filePath = url.slice("file:".length)
-  const dir = dirname(filePath)
-  if (dir && dir !== "." && !existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
-  }
+function createDb() {
+  return drizzle(
+    createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN }),
+    { schema },
+  )
 }
 
-const client = createClient({
-  url,
-  authToken: process.env.DATABASE_AUTH_TOKEN,
-})
-
-export const db = drizzle(client, { schema })
+// Only construct the libSQL client on the server. This module is reachable from the
+// client bundle (via server-fn `.middleware()` references), and the browser libSQL
+// client throws on `file:` URLs and needs node APIs. On the client `db` stays an unused
+// `undefined` — every real query runs inside a server-only (stripped) handler.
+export const db = (
+  typeof window === "undefined" ? createDb() : undefined
+) as ReturnType<typeof createDb>
 export { schema }
