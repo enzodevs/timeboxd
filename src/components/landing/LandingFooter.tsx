@@ -95,7 +95,6 @@ export function LandingFooter() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-sm text-muted-foreground sm:flex-row">
           <p>© {SITE.brand} · MIT licensed</p>
-          <p>Built with TanStack Start &amp; Magic UI.</p>
         </div>
       </div>
 
