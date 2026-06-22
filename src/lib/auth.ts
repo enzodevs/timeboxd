@@ -2,7 +2,8 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { magicLink } from "better-auth/plugins"
 
-import { db, schema } from "@/db/client"
+import { db } from "@/db/client"
+import * as schema from "@/db/schema"
 import { sendEmail } from "@/server/email"
 
 // Google sign-in reuses the same OAuth client as the Calendar/Tasks integration.

@@ -1,6 +1,8 @@
 import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 
+import { createServerOnlyFn } from "@tanstack/react-start"
+
 import * as schema from "./schema"
 
 // IMPORTANT: keep this module free of `node:*` imports and top-level side effects.
@@ -10,12 +12,14 @@ import * as schema from "./schema"
 // creation lives in db/migrate.ts (server-only, dynamic import).
 const url = process.env.DATABASE_URL ?? "file:./data/timeboxd.db"
 
-function createDb() {
-  return drizzle(
-    createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN }),
-    { schema },
-  )
-}
+// `createServerOnlyFn` marks this body server-only: the TanStack Start compiler
+// strips it (and the now-unused drizzle / @libsql imports) from the client bundle,
+// so the DB driver no longer ships to the browser. No-op at runtime on the server.
+const createDb = createServerOnlyFn(() =>
+  drizzle(createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN }), {
+    schema,
+  }),
+)
 
 // Only construct the libSQL client on the server. This module is reachable from the
 // client bundle (via server-fn `.middleware()` references), and the browser libSQL
@@ -24,4 +28,3 @@ function createDb() {
 export const db = (
   typeof window === "undefined" ? createDb() : undefined
 ) as ReturnType<typeof createDb>
-export { schema }
