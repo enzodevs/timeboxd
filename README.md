@@ -34,7 +34,7 @@ own machine. No account required.
 Requires Node 20+ and [pnpm](https://pnpm.io).
 
 ```bash
-git clone https://github.com/<your-username>/timeboxd.git
+git clone https://github.com/enzodevs/timeboxd.git
 cd timeboxd
 pnpm install
 cp .env.example .env        # optional: only needed for Google sync

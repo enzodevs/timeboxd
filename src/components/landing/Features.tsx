@@ -1,18 +1,24 @@
+import * as React from "react"
 import type { Icon } from "@phosphor-icons/react"
 import {
   CalendarDotsIcon,
   CheckSquareIcon,
-  ColumnsIcon,
   DatabaseIcon,
   GoogleLogoIcon,
   HandGrabbingIcon,
   KeyboardIcon,
-  LightningIcon,
   NoteIcon,
-  NotePencilIcon,
-  SquaresFourIcon,
 } from "@phosphor-icons/react"
 
+import {
+  BookOpenTextIcon,
+  BoxesIcon,
+  LayersIcon,
+  TerminalIcon,
+  ZapIcon,
+  useIconHover,
+} from "@/components/animateicons"
+import type { AnimatedIconHandle } from "@/components/animateicons"
 import { cn } from "@/lib/utils"
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { BorderBeam } from "@/components/magicui/border-beam"
@@ -20,7 +26,8 @@ import { OrbitingCircles } from "@/components/magicui/orbiting-circles"
 import { SectionHeading } from "./SectionHeading"
 
 interface Feature {
-  icon: Icon
+  /** Card icon. `ref` drives the animation from the card's hover area. */
+  renderIcon: (ref: React.Ref<AnimatedIconHandle>) => React.ReactNode
   title: string
   body: string
   className: string
@@ -30,7 +37,7 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    icon: ColumnsIcon,
+    renderIcon: (ref) => <LayersIcon ref={ref} size={20} />,
     title: "One workspace, everything in reach",
     body: "A resizable to-do list, day timeline, and notes — side by side. Plus optional Google Calendar & Tasks, all orbiting a single keyboard-driven screen.",
     className: "md:col-span-2 md:row-span-2",
@@ -38,31 +45,32 @@ const FEATURES: Feature[] = [
     visual: "orbit",
   },
   {
-    icon: LightningIcon,
-    title: "Quick-add that parses",
+    renderIcon: (ref) => <ZapIcon ref={ref} size={20} />,
+    title: "Schedule a task in one line",
     body: "Type `Study #school -d @7pm-8pm` to set a tag, flag deep work, and schedule a time in one line. Press N to focus from anywhere.",
     className: "md:col-span-1",
   },
   {
-    icon: SquaresFourIcon,
+    renderIcon: (ref) => <BoxesIcon ref={ref} size={20} />,
     title: "Drag tasks into time-boxes",
     body: "Drop a to-do on the timeline to block it. Drag to move, drag the edges to resize with 15-minute snapping. Overlaps lay out side-by-side.",
     className: "md:col-span-1",
   },
   {
-    icon: NotePencilIcon,
-    title: "Per-day notes braindump",
-    body: "A rich-text scratchpad for each day — headings, lists, quotes, code — that autosaves as you type.",
+    renderIcon: (ref) => <BookOpenTextIcon ref={ref} size={20} />,
+    title: "A scratchpad for every day",
+    body: "A rich-text notes pane for each day — headings, lists, quotes, code — that autosaves as you type.",
     className: "md:col-span-1",
   },
   {
-    icon: GoogleLogoIcon,
+    // Keep the real Google mark for brand clarity; it stays static.
+    renderIcon: () => <GoogleLogoIcon weight="duotone" className="size-5" />,
     title: "Optional Google sync",
     body: "Pull Calendar events onto your timeline, push time-boxes back, and import Google Tasks as to-dos. Entirely optional.",
     className: "md:col-span-1",
   },
   {
-    icon: KeyboardIcon,
+    renderIcon: (ref) => <TerminalIcon ref={ref} size={20} />,
     title: "Keyboard-first & themeable",
     body: "⌘K command palette, arrow-key day navigation, light & dark themes. Built to stay out of your way.",
     className: "md:col-span-2",
@@ -104,11 +112,15 @@ function OrbitVisual() {
 }
 
 function FeatureCard({ feature }: { feature: Feature }) {
-  const Icon = feature.icon
+  const iconHover = useIconHover()
   return (
-    <div className="tb-card tb-card-interactive group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-6">
+    <div
+      onMouseEnter={iconHover.onMouseEnter}
+      onMouseLeave={iconHover.onMouseLeave}
+      className="tb-card tb-card-interactive group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-6"
+    >
       <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Icon weight="duotone" className="size-5" />
+        {feature.renderIcon(iconHover.ref)}
       </span>
       <h3 className="mt-4 font-heading text-lg font-semibold tracking-tight">
         {feature.title}

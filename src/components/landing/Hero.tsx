@@ -1,13 +1,13 @@
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import { useInView, useReducedMotion } from "motion/react"
-import {
-  ArrowRightIcon,
-  CheckCircleIcon,
-  CircleIcon,
-  GithubLogoIcon,
-} from "@phosphor-icons/react"
+import { CheckCircleIcon, CircleIcon } from "@phosphor-icons/react"
 
+import {
+  GithubIcon,
+  MoveRightIcon,
+  useIconHover,
+} from "@/components/animateicons"
 import { cn } from "@/lib/utils"
 import { AnimatedShinyText } from "@/components/magicui/animated-shiny-text"
 import { BlurFade } from "@/components/magicui/blur-fade"
@@ -17,6 +17,9 @@ import { RainbowButton } from "@/components/magicui/rainbow-button"
 import { SITE } from "./site"
 
 export function Hero() {
+  const badgeHover = useIconHover()
+  const launchHover = useIconHover()
+  const githubHover = useIconHover()
   return (
     <section id="top" className="relative overflow-hidden pt-16 pb-12 sm:pt-24">
       <DotPattern
@@ -36,13 +39,19 @@ export function Hero() {
             href={SITE.githubUrl}
             target="_blank"
             rel="noreferrer"
+            onMouseEnter={badgeHover.onMouseEnter}
+            onMouseLeave={badgeHover.onMouseLeave}
             className="group mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-sm shadow-sm backdrop-blur transition hover:bg-card"
           >
             <span className="flex size-1.5 rounded-full bg-primary" />
             <AnimatedShinyText className="inline-flex items-center">
               Open source · Local-first · No account
             </AnimatedShinyText>
-            <ArrowRightIcon className="size-3.5 text-muted-foreground transition group-hover:translate-x-0.5" />
+            <MoveRightIcon
+              ref={badgeHover.ref}
+              size={14}
+              className="text-muted-foreground"
+            />
           </a>
         </BlurFade>
 
@@ -66,18 +75,24 @@ export function Hero() {
         <BlurFade delay={0.24} inView>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <RainbowButton asChild size="lg">
-              <Link to={SITE.appPath}>
+              <Link
+                to={SITE.appPath}
+                onMouseEnter={launchHover.onMouseEnter}
+                onMouseLeave={launchHover.onMouseLeave}
+              >
                 Launch app
-                <ArrowRightIcon className="size-4" />
+                <MoveRightIcon ref={launchHover.ref} size={16} />
               </Link>
             </RainbowButton>
             <a
               href={SITE.githubUrl}
               target="_blank"
               rel="noreferrer"
+              onMouseEnter={githubHover.onMouseEnter}
+              onMouseLeave={githubHover.onMouseLeave}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 text-base font-medium shadow-sm transition hover:bg-muted"
             >
-              <GithubLogoIcon className="size-5" />
+              <GithubIcon ref={githubHover.ref} size={20} />
               Star on GitHub
             </a>
           </div>
@@ -149,7 +164,9 @@ function AppPreview() {
                 <CircleIcon className="size-4 text-muted-foreground/50" />
               )}
               <span
-                className={cn(task.done && "text-muted-foreground line-through")}
+                className={cn(
+                  task.done && "text-muted-foreground line-through"
+                )}
               >
                 {task.t}
               </span>
@@ -175,10 +192,10 @@ function AppPreview() {
               </div>
             ))}
             {/* time-boxes */}
-            <div className="absolute top-1 left-12 right-2 h-10 rounded-md border border-primary/30 bg-primary/15 px-2 py-1 text-[11px] font-medium text-primary">
+            <div className="absolute top-1 right-2 left-12 h-10 rounded-md border border-primary/30 bg-primary/15 px-2 py-1 text-[11px] font-medium text-primary">
               Deep work: thesis
             </div>
-            <div className="absolute top-[88px] left-12 right-16 h-8 rounded-md border border-timebox-deep/30 bg-timebox/15 px-2 py-1 text-[11px] font-medium text-timebox-deep">
+            <div className="absolute top-[88px] right-16 left-12 h-8 rounded-md border border-timebox-deep/30 bg-timebox/15 px-2 py-1 text-[11px] font-medium text-timebox-deep">
               Review PRs
             </div>
             {/* now indicator */}
@@ -232,7 +249,7 @@ function AppPreviewReveal() {
       <div
         className={cn(
           "transition-[opacity,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          revealed ? "opacity-100 blur-0" : "opacity-0 blur-[6px]"
+          revealed ? "blur-0 opacity-100" : "opacity-0 blur-[6px]"
         )}
       >
         <AppPreview />

@@ -1,7 +1,12 @@
 import * as React from "react"
 import { Link } from "@tanstack/react-router"
 import { useTheme } from "next-themes"
-import { GithubLogoIcon, ListIcon, MoonIcon, SunIcon } from "@phosphor-icons/react"
+import {
+  GithubIcon,
+  MenuIcon,
+  MoonIcon,
+  SunIcon,
+} from "@/components/animateicons"
 
 import { cn } from "@/lib/utils"
 import { RainbowButton } from "@/components/magicui/rainbow-button"
@@ -20,9 +25,9 @@ function ThemeToggle() {
       className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
     >
       {mounted && resolvedTheme === "dark" ? (
-        <SunIcon className="size-4" />
+        <SunIcon size={16} className="size-full" />
       ) : (
-        <MoonIcon className="size-4" />
+        <MoonIcon size={16} className="size-full" />
       )}
     </button>
   )
@@ -59,7 +64,7 @@ export function LandingHeader() {
             aria-label="GitHub"
             className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
-            <GithubLogoIcon className="size-5" />
+            <GithubIcon size={20} className="size-full" />
           </a>
           <RainbowButton asChild size="sm" className="hidden sm:inline-flex">
             <Link to={SITE.appPath}>Launch app</Link>
@@ -70,7 +75,7 @@ export function LandingHeader() {
             onClick={() => setOpen((v) => !v)}
             className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground md:hidden"
           >
-            <ListIcon className="size-5" />
+            <MenuIcon size={20} className="size-full" />
           </button>
         </div>
       </div>

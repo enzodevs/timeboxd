@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router"
-import { GithubLogoIcon } from "@phosphor-icons/react"
 
+import { GithubIcon, useIconHover } from "@/components/animateicons"
 import { Logo } from "./Logo"
 import { SITE } from "./site"
 
-const COLUMNS: { title: string; links: { label: string; href: string; to?: string; external?: boolean }[] }[] = [
+const COLUMNS: {
+  title: string
+  links: { label: string; href: string; to?: string; external?: boolean }[]
+}[] = [
   {
     title: "Product",
     links: [
@@ -19,13 +22,18 @@ const COLUMNS: { title: string; links: { label: string; href: string; to?: strin
     links: [
       { label: "GitHub", href: SITE.githubUrl, external: true },
       { label: "README", href: `${SITE.githubUrl}#readme`, external: true },
-      { label: "License (MIT)", href: `${SITE.githubUrl}/blob/main/LICENSE`, external: true },
+      {
+        label: "License (MIT)",
+        href: `${SITE.githubUrl}/blob/main/LICENSE`,
+        external: true,
+      },
       { label: "FAQ", href: "#faq" },
     ],
   },
 ]
 
 export function LandingFooter() {
+  const githubHover = useIconHover()
   return (
     <footer className="relative overflow-hidden border-t border-border/60">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
@@ -39,9 +47,11 @@ export function LandingFooter() {
               href={SITE.githubUrl}
               target="_blank"
               rel="noreferrer"
+              onMouseEnter={githubHover.onMouseEnter}
+              onMouseLeave={githubHover.onMouseLeave}
               className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
             >
-              <GithubLogoIcon className="size-5" />
+              <GithubIcon ref={githubHover.ref} size={20} />
               Star on GitHub
             </a>
           </div>
@@ -84,9 +94,7 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 text-sm text-muted-foreground sm:flex-row">
-          <p>
-            © {SITE.brand} · MIT licensed
-          </p>
+          <p>© {SITE.brand} · MIT licensed</p>
           <p>Built with TanStack Start &amp; Magic UI.</p>
         </div>
       </div>
@@ -94,7 +102,7 @@ export function LandingFooter() {
       {/* faded wordmark watermark */}
       <div
         aria-hidden
-        className="pointer-events-none select-none px-4 text-center font-heading text-[18vw] leading-none font-bold tracking-tighter text-foreground/[0.03]"
+        className="pointer-events-none px-4 text-center font-heading text-[18vw] leading-none font-bold tracking-tighter text-foreground/[0.03] select-none"
       >
         {SITE.brand}
       </div>

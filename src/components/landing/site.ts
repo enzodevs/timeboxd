@@ -4,8 +4,8 @@ export const SITE = {
   brand: "timeboxd",
   /** Where the "Launch app" buttons send people (the actual app shell). */
   appPath: "/app",
-  /** Public repo. README references this placeholder — update to your real URL. */
-  githubUrl: "https://github.com/your-username/timeboxd",
+  /** Public repo. */
+  githubUrl: "https://github.com/enzodevs/timeboxd",
   tagline: "Time-boxing for your day.",
 } as const
 

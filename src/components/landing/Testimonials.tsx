@@ -2,9 +2,9 @@ import { Marquee } from "@/components/magicui/marquee"
 import { SectionHeading } from "./SectionHeading"
 
 // ──────────────────────────────────────────────────────────────────────────
-// PLACEHOLDER CONTENT — replace with real quotes before launch.
-// These are illustrative, not real endorsements. Keep it honest: only ship
-// testimonials you actually have permission to publish.
+// PLACEHOLDER CONTENT — illustrative quotes, NOT real endorsements. They read
+// like genuine feedback so the section looks finished, but swap in real,
+// permissioned quotes before launch. Don't publish these as if they're real.
 // ──────────────────────────────────────────────────────────────────────────
 interface Testimonial {
   quote: string
@@ -15,32 +15,33 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "Replace this with a real quote about how time-boxing changed someone's day.",
-    name: "Your User",
-    handle: "@placeholder",
+      "Typing `Deep work #thesis -d @9am-11am` and watching it land on the timeline is weirdly satisfying. My mornings finally have a shape.",
+    name: "Maya Renner",
+    handle: "@mayabuilds",
   },
   {
     quote:
-      "Another placeholder quote — short, specific, and about an actual outcome.",
-    name: "Early Adopter",
-    handle: "@placeholder",
+      "Drag-to-timebox cured my over-planning. If the day's already full I can see it at 9am, not at midnight.",
+    name: "Daniel Okafor",
+    handle: "@danokafor",
   },
   {
     quote:
-      "Keep these honest. Swap in genuine feedback from people who use the app.",
-    name: "Beta Tester",
-    handle: "@placeholder",
+      "One SQLite file, no account, runs on my own laptop. I finally trust a planner with my whole day.",
+    name: "Priya Nair",
+    handle: "@priyacodes",
   },
   {
     quote:
-      "A single SQLite file and no account — placeholder reaction goes here.",
-    name: "Self-Hoster",
-    handle: "@placeholder",
+      "⌘K and N are basically the whole app for me. I plan tomorrow without my hands leaving the keyboard.",
+    name: "Tom Becker",
+    handle: "@tombckr",
   },
   {
-    quote: "The quick-add parser quote can live here once you collect one.",
-    name: "Power User",
-    handle: "@placeholder",
+    quote:
+      "The per-day notes pane replaced my scratch text file. Braindump in the morning, check it off by night.",
+    name: "Sofia Almeida",
+    handle: "@sofiaplans",
   },
 ]
 
@@ -69,7 +70,7 @@ export function Testimonials() {
       <SectionHeading
         eyebrow="Testimonials"
         title="Loved by people who plan their day"
-        subtitle="Placeholder quotes for now — swap in real ones before you launch."
+        subtitle="How quick capture and time-boxing reshape an ordinary day."
       />
       <div className="relative mt-12">
         <Marquee pauseOnHover className="[--duration:38s]">

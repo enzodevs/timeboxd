@@ -1,15 +1,16 @@
-import type { Icon } from "@phosphor-icons/react"
 import {
-  CalendarCheckIcon,
-  KeyboardIcon,
-  TargetIcon,
-} from "@phosphor-icons/react"
-
+  BoxIcon,
+  ClipboardIcon,
+  PlayIcon,
+  TerminalIcon,
+  useIconHover,
+} from "@/components/animateicons"
+import type { AnimatedIcon } from "@/components/animateicons"
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { SectionHeading } from "./SectionHeading"
 
 interface Step {
-  icon: Icon
+  icon: AnimatedIcon
   step: string
   title: string
   body: string
@@ -17,24 +18,49 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    icon: KeyboardIcon,
+    icon: ClipboardIcon,
     step: "01",
     title: "Capture",
-    body: "Brain-dump every to-do. The quick-add parser turns one line into a tagged, scheduled, deep-work task.",
+    body: "Braindump every to-do. The quick-add parser turns one line into a tagged, scheduled, deep-work task.",
   },
   {
-    icon: CalendarCheckIcon,
+    icon: BoxIcon,
     step: "02",
     title: "Box",
     body: "Drag tasks onto the timeline to commit real time to them. Resize to fit, with 15-minute snapping.",
   },
   {
-    icon: TargetIcon,
+    icon: PlayIcon,
     step: "03",
     title: "Focus",
     body: "Follow the plan with a live now-indicator, check things off, and braindump notes as the day unfolds.",
   },
 ]
+
+function StepCard({ s }: { s: Step }) {
+  const iconHover = useIconHover()
+  const Icon = s.icon
+  return (
+    <div
+      onMouseEnter={iconHover.onMouseEnter}
+      onMouseLeave={iconHover.onMouseLeave}
+      className="tb-card tb-card-interactive relative h-full rounded-xl border border-border bg-card p-6"
+    >
+      <div className="flex items-center justify-between">
+        <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon ref={iconHover.ref} size={20} />
+        </span>
+        <span className="font-heading text-3xl font-semibold text-muted-foreground/30">
+          {s.step}
+        </span>
+      </div>
+      <h3 className="mt-4 font-heading text-lg font-semibold tracking-tight">
+        {s.title}
+      </h3>
+      <p className="mt-2 text-sm text-pretty text-muted-foreground">{s.body}</p>
+    </div>
+  )
+}
 
 export function Workflow() {
   return (
@@ -49,8 +75,12 @@ export function Workflow() {
       <BlurFade delay={0.1} inView>
         <div className="tb-card mx-auto mt-12 max-w-2xl overflow-hidden rounded-xl border border-border bg-card">
           <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-            <KeyboardIcon className="size-4" />
-            Press <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-mono">N</kbd> to add a task
+            <TerminalIcon size={16} />
+            Press{" "}
+            <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-mono">
+              N
+            </kbd>{" "}
+            to add a task
           </div>
           <div className="p-5">
             <div className="tb-sunken flex items-center rounded-lg border border-border bg-muted/40 px-3 py-2.5 font-mono text-sm">
@@ -77,29 +107,11 @@ export function Workflow() {
       </BlurFade>
 
       <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-        {STEPS.map((s, i) => {
-          const Icon = s.icon
-          return (
-            <BlurFade key={s.step} delay={0.1 + 0.08 * i} inView>
-              <div className="tb-card tb-card-interactive relative h-full rounded-xl border border-border bg-card p-6">
-                <div className="flex items-center justify-between">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon weight="duotone" className="size-5" />
-                  </span>
-                  <span className="font-heading text-3xl font-semibold text-muted-foreground/30">
-                    {s.step}
-                  </span>
-                </div>
-                <h3 className="mt-4 font-heading text-lg font-semibold tracking-tight">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-sm text-pretty text-muted-foreground">
-                  {s.body}
-                </p>
-              </div>
-            </BlurFade>
-          )
-        })}
+        {STEPS.map((s, i) => (
+          <BlurFade key={s.step} delay={0.1 + 0.08 * i} inView>
+            <StepCard s={s} />
+          </BlurFade>
+        ))}
       </div>
     </section>
   )

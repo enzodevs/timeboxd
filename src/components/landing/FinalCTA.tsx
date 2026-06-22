@@ -1,12 +1,18 @@
 import { Link } from "@tanstack/react-router"
-import { ArrowRightIcon, GithubLogoIcon } from "@phosphor-icons/react"
 
+import {
+  GithubIcon,
+  MoveRightIcon,
+  useIconHover,
+} from "@/components/animateicons"
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { DotPattern } from "@/components/magicui/dot-pattern"
 import { RainbowButton } from "@/components/magicui/rainbow-button"
 import { SITE } from "./site"
 
 export function FinalCTA() {
+  const launchHover = useIconHover()
+  const sourceHover = useIconHover()
   return (
     <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <BlurFade inView>
@@ -25,23 +31,29 @@ export function FinalCTA() {
               Start boxing your time today
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg text-pretty text-muted-foreground">
-              No account, no setup. Open the app and turn today's to-do list into
-              a plan you'll actually follow.
+              No account, no setup. Open the app and turn today's to-do list
+              into a plan you'll actually follow.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <RainbowButton asChild size="lg">
-                <Link to={SITE.appPath}>
+                <Link
+                  to={SITE.appPath}
+                  onMouseEnter={launchHover.onMouseEnter}
+                  onMouseLeave={launchHover.onMouseLeave}
+                >
                   Launch app
-                  <ArrowRightIcon className="size-4" />
+                  <MoveRightIcon ref={launchHover.ref} size={16} />
                 </Link>
               </RainbowButton>
               <a
                 href={SITE.githubUrl}
                 target="_blank"
                 rel="noreferrer"
+                onMouseEnter={sourceHover.onMouseEnter}
+                onMouseLeave={sourceHover.onMouseLeave}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-background px-6 text-base font-medium transition hover:bg-muted"
               >
-                <GithubLogoIcon className="size-5" />
+                <GithubIcon ref={sourceHover.ref} size={20} />
                 View source
               </a>
             </div>
