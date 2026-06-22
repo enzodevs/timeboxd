@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an improvement or new capability for timeboxd
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea. For larger changes, describe the workflow and why it matters.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What user problem would this solve?
+      placeholder: I want to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should timeboxd do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Are there simpler approaches or workarounds?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, sketches, examples, or links that help explain the request.

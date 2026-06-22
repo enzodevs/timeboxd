@@ -105,8 +105,9 @@ Tokens are stored in your local database and refreshed automatically.
 
 ## Contributing
 
-Issues and PRs welcome. Run `pnpm typecheck && pnpm lint && pnpm test` before
-opening a pull request.
+Issues and PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup,
+workflow, and pull request guidelines. Run `pnpm typecheck && pnpm lint && pnpm test`
+before opening a pull request.
 
 ## License
 
