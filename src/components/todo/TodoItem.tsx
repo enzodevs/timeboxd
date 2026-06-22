@@ -6,7 +6,6 @@ import {
   BrainIcon,
   CalendarPlusIcon,
   CheckCircleIcon,
-  CircleIcon,
   CopyIcon,
   DotsThreeIcon,
   GoogleLogoIcon,
@@ -17,6 +16,7 @@ import {
 import type { Task } from "@/db/schema"
 import { cn } from "@/lib/utils"
 import { formatClock, isoFromDayMinutes } from "@/lib/time"
+import { SuccessCheck } from "@/components/ui/success-check"
 import { useTaskMutations } from "@/hooks/use-tasks"
 import { useTimeboxMutations } from "@/hooks/use-timeboxes"
 import {
@@ -227,11 +227,7 @@ export function TodoItem({
               task.completed && "text-primary"
             )}
           >
-            {task.completed ? (
-              <CheckCircleIcon weight="fill" className="size-5" />
-            ) : (
-              <CircleIcon className="size-5" />
-            )}
+            <SuccessCheck checked={task.completed} className="size-5" />
           </button>
 
           <div

@@ -1,11 +1,14 @@
 import * as React from "react"
-import { useDroppable } from "@dnd-kit/core"
+import { useDndMonitor, useDroppable } from "@dnd-kit/core"
+import { useQueryClient } from "@tanstack/react-query"
 
 import type { Timebox as TimeboxRow } from "@/db/schema"
 import { CALENDAR_DROPPABLE } from "@/lib/dnd"
 import {
   DAY_MINUTES,
+  DEFAULT_BOX_MIN,
   PX_PER_HOUR,
+  formatClock,
   formatHourLabel,
   isoFromDayMinutes,
   layoutIntervals,
@@ -13,6 +16,8 @@ import {
   snap,
   ymd,
 } from "@/lib/time"
+import { tasksKey } from "@/hooks/use-tasks"
+import type { TaskLists } from "@/server/tasks"
 import { useTimeboxes, useTimeboxMutations } from "@/hooks/use-timeboxes"
 import { useGoogleEvents } from "@/hooks/use-google"
 import { Timebox } from "./Timebox"
@@ -43,6 +48,7 @@ export function Timeline({
     Boolean(googleConnected)
   )
   const { create } = useTimeboxMutations(date)
+  const qc = useQueryClient()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const { setNodeRef } = useDroppable({
     id: CALENDAR_DROPPABLE,
@@ -54,6 +60,57 @@ export function Timeline({
     setNodeRef(node)
     gridRef.current = node
   }
+
+  // Live "where will this land" preview while dragging a to-do over the grid.
+  const dragged = React.useRef<{ dur: number; label: string } | null>(null)
+  const [preview, setPreview] = React.useState<{
+    start: number
+    end: number
+    label: string
+  } | null>(null)
+
+  const previewFromTop = (clientTop: number | undefined) => {
+    if (readOnly || !dragged.current || clientTop == null) return null
+    const rect = gridRef.current?.getBoundingClientRect()
+    if (!rect) return null
+    const start = clamp(
+      snap(((clientTop - rect.top) / PX_PER_HOUR) * 60),
+      0,
+      DAY_MINUTES - 15
+    )
+    const end = Math.min(start + dragged.current.dur, DAY_MINUTES)
+    return { start, end, label: dragged.current.label }
+  }
+
+  useDndMonitor({
+    onDragStart(e) {
+      if (readOnly) return
+      const lists = qc.getQueryData<TaskLists>(tasksKey(date))
+      const id = String(e.active.id)
+      const task =
+        lists?.today.find((t) => t.id === id) ??
+        lists?.later.find((t) => t.id === id) ??
+        null
+      dragged.current = task
+        ? { dur: task.estimateMin ?? DEFAULT_BOX_MIN, label: task.title }
+        : null
+    },
+    onDragMove(e) {
+      if (e.over?.id !== CALENDAR_DROPPABLE) {
+        setPreview(null)
+        return
+      }
+      setPreview(previewFromTop(e.active.rect.current.translated?.top))
+    },
+    onDragEnd() {
+      dragged.current = null
+      setPreview(null)
+    },
+    onDragCancel() {
+      dragged.current = null
+      setPreview(null)
+    },
+  })
 
   // Auto-scroll to "now" (or the morning) when the day changes.
   const scrolledFor = React.useRef<string | null>(null)
@@ -158,6 +215,27 @@ export function Timeline({
               readOnly={readOnly}
             />
           ))}
+          {/* drop-placement preview */}
+          {preview && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute right-0 left-0 z-40 flex flex-col justify-start overflow-hidden rounded-lg border border-dashed border-primary/70 bg-primary/10 px-3 py-1 text-left"
+              style={{
+                top: (preview.start / 60) * PX_PER_HOUR,
+                height: Math.max(
+                  ((preview.end - preview.start) / 60) * PX_PER_HOUR,
+                  22
+                ),
+              }}
+            >
+              <span className="text-[10px] leading-tight font-medium text-primary tabular-nums">
+                {formatClock(preview.start)} - {formatClock(preview.end)}
+              </span>
+              <span className="truncate text-sm font-medium text-primary/90">
+                {preview.label}
+              </span>
+            </div>
+          )}
           {isToday && <NowIndicator pxPerHour={PX_PER_HOUR} />}
         </div>
       </div>

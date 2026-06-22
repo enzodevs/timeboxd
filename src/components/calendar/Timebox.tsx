@@ -5,7 +5,6 @@ import {
   ArrowRightIcon,
   BrainIcon,
   CheckCircleIcon,
-  CircleIcon,
   CopyIcon,
   DotsThreeIcon,
   GoogleLogoIcon,
@@ -43,6 +42,7 @@ import {
 } from "@/components/ui/context-menu"
 import type { MenuParts } from "@/components/ui/context-menu"
 import { CONTEXT_PARTS, DROPDOWN_PARTS } from "@/lib/menu-parts"
+import { SuccessCheck } from "@/components/ui/success-check"
 import { AddTagDialog } from "@/components/todo/AddTagDialog"
 
 const MIN_DURATION = 15
@@ -127,13 +127,22 @@ export function Timebox({
       window.removeEventListener("pointerup", onUp)
       setDraft((d) => {
         if (d && (d.start !== origStart || d.end !== origEnd)) {
-          update.mutate({
-            id: box.id,
-            patch: {
-              start: isoFromDayMinutes(box.date, d.start),
-              end: isoFromDayMinutes(box.date, d.end),
+          // Keep rendering the drafted position until the mutation commits.
+          // Clearing the draft now would flash the box back to its pre-drag
+          // spot for the frame before the optimistic cache update lands —
+          // that's the "bounce". onSettled drops the draft once the box prop
+          // already reflects the new (or rolled-back) position.
+          update.mutate(
+            {
+              id: box.id,
+              patch: {
+                start: isoFromDayMinutes(box.date, d.start),
+                end: isoFromDayMinutes(box.date, d.end),
+              },
             },
-          })
+            { onSettled: () => setDraft(null) }
+          )
+          return d
         }
         return null
       })
@@ -394,13 +403,12 @@ export function Timebox({
                     patch: { completed: !box.completed },
                   })
                 }
-                className="flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground disabled:pointer-events-none"
-              >
-                {box.completed ? (
-                  <CheckCircleIcon weight="fill" className="size-4" />
-                ) : (
-                  <CircleIcon className="size-4" />
+                className={cn(
+                  "flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground disabled:pointer-events-none",
+                  box.completed && "text-primary"
                 )}
+              >
+                <SuccessCheck checked={box.completed} className="size-4" />
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

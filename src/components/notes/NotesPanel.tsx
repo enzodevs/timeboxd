@@ -12,6 +12,7 @@ import {
 import type { JsonValue } from "@/db/schema"
 import { useNote, useSaveNote } from "@/hooks/use-notes"
 import { EditorToolbar } from "./EditorToolbar"
+import { NotesSlashMenu } from "./SlashMenu"
 
 export function NotesPanel({
   date,
@@ -26,6 +27,8 @@ export function NotesPanel({
   const applying = React.useRef(false)
   const loadedFor = React.useRef<string | null>(null)
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Set by NotesSlashMenu; lets the "/" menu intercept nav keys first.
+  const slashKey = React.useRef<(e: KeyboardEvent) => boolean>(() => false)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -36,6 +39,7 @@ export function NotesPanel({
     editable: !readOnly,
     editorProps: {
       attributes: { class: "tiptap min-h-[calc(100%-1rem)] px-4 py-3" },
+      handleKeyDown: (_view, event) => slashKey.current(event),
     },
     onUpdate: ({ editor: ed }) => {
       if (readOnly) return
@@ -108,6 +112,9 @@ export function NotesPanel({
       >
         <EditorContent editor={editor} className="h-full" />
       </div>
+      {editor && !readOnly ? (
+        <NotesSlashMenu editor={editor} keyRef={slashKey} />
+      ) : null}
     </section>
   )
 }

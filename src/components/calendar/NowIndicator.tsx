@@ -21,7 +21,11 @@ export function NowIndicator({ pxPerHour }: { pxPerHour: number }) {
       style={{ top: (minutes / 60) * pxPerHour }}
     >
       <div className="relative h-px w-full bg-primary">
-        <div className="absolute top-1/2 -left-1 size-2.5 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_0_3px_var(--background)]" />
+        {/* Pulsing "live" status dot (shadcn.io / kibo-ui status effect). */}
+        <span className="absolute top-1/2 -left-1 flex size-2.5 -translate-y-1/2">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75 motion-reduce:animate-none" />
+          <span className="relative inline-flex size-2.5 rounded-full bg-primary shadow-[0_0_0_3px_var(--background)]" />
+        </span>
       </div>
     </div>
   )
