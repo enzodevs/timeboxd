@@ -9,6 +9,16 @@ import { authMiddleware } from "@/lib/auth-middleware"
 
 const ACTIVE = ["active", "on_trial"] as const
 
+/**
+ * True when running in free / self-hosted mode (subscription gating bypassed).
+ * Tolerant of stray whitespace or casing in the env value — e.g. a trailing
+ * newline from `echo "true" | vercel env add` would otherwise make a literal
+ * `=== "true"` check fail and block every write.
+ */
+export function isSelfHosted(): boolean {
+  return (process.env.SELF_HOSTED ?? "").trim().toLowerCase() === "true"
+}
+
 export interface AccessState {
   hasActiveAccess: boolean
   selfHosted: boolean
@@ -40,14 +50,14 @@ export async function getLatestSubscription(
 }
 
 export async function hasActiveAccess(userId: string): Promise<boolean> {
-  if (process.env.SELF_HOSTED === "true") return true
+  if (isSelfHosted()) return true
   return subscriptionAllowsAccess(await getLatestSubscription(userId))
 }
 
 export const getAccess = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<AccessState> => {
-    const selfHosted = process.env.SELF_HOSTED === "true"
+    const selfHosted = isSelfHosted()
     return {
       selfHosted,
       hasActiveAccess: selfHosted
@@ -59,7 +69,7 @@ export const getAccess = createServerFn({ method: "GET" })
 export const getBillingStatus = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
-    const selfHosted = process.env.SELF_HOSTED === "true"
+    const selfHosted = isSelfHosted()
     const subscription = await getLatestSubscription(context.userId)
     return {
       selfHosted,
