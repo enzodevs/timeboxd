@@ -1,8 +1,18 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
+
+import { LandingPage } from "@/components/landing/LandingPage"
 
 // The marketing landing page is the host front page; the app lives at /app.
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/landing" })
-  },
+  head: () => ({
+    meta: [
+      { title: "timeboxd — time-boxing for your day" },
+      {
+        name: "description",
+        content:
+          "Open-source, local-first time-boxing. Plan your to-dos, drag them onto a timeline as time-boxes, and braindump notes — all in one keyboard-friendly workspace.",
+      },
+    ],
+  }),
+  component: LandingPage,
 })

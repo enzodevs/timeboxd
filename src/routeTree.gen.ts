@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as LandingRouteImport } from './routes/landing'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -25,11 +24,6 @@ const PricingRoute = PricingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LandingRoute = LandingRouteImport.update({
-  id: '/landing',
-  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -56,7 +50,6 @@ const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
-  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -65,7 +58,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
-  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -75,7 +67,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRoute
-  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -86,7 +77,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
-    | '/landing'
     | '/login'
     | '/pricing'
     | '/api/auth/$'
@@ -95,7 +85,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
-    | '/landing'
     | '/login'
     | '/pricing'
     | '/api/auth/$'
@@ -104,7 +93,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
-    | '/landing'
     | '/login'
     | '/pricing'
     | '/api/auth/$'
@@ -114,7 +102,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
-  LandingRoute: typeof LandingRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -135,13 +122,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/landing': {
-      id: '/landing'
-      path: '/landing'
-      fullPath: '/landing'
-      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -178,7 +158,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
-  LandingRoute: LandingRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

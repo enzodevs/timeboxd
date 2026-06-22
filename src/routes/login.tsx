@@ -238,7 +238,7 @@ function LoginPage() {
 
             <div className="mt-6 text-center text-xs text-muted-foreground">
               <Link
-                to="/landing"
+                to="/"
                 className="inline-flex items-center gap-1 text-primary hover:underline"
               >
                 <ArrowLeftIcon className="size-3" />
