@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 
+import { BlurFade } from "@/components/magicui/blur-fade"
 import { Marquee } from "@/components/magicui/marquee"
 
 const STACK: { label: string; icon: Icon }[] = [
@@ -26,9 +27,11 @@ const STACK: { label: string; icon: Icon }[] = [
 export function LogoCloud() {
   return (
     <section className="border-y border-border/60 bg-muted/20 py-10">
-      <p className="text-center text-sm font-medium text-muted-foreground">
-        Built on tools you already trust
-      </p>
+      <BlurFade inView>
+        <p className="text-center text-sm font-medium text-muted-foreground">
+          Built on tools you already trust
+        </p>
+      </BlurFade>
       <div className="relative mt-6">
         <Marquee pauseOnHover className="[--duration:32s]">
           {STACK.map(({ label, icon: Icon }) => (

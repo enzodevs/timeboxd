@@ -1,3 +1,4 @@
+import { BlurFade } from "@/components/magicui/blur-fade"
 import { Marquee } from "@/components/magicui/marquee"
 import { SectionHeading } from "./SectionHeading"
 
@@ -72,20 +73,22 @@ export function Testimonials() {
         title="Loved by people who plan their day"
         subtitle="How quick capture and time-boxing reshape an ordinary day."
       />
-      <div className="relative mt-12">
-        <Marquee pauseOnHover className="[--duration:38s]">
-          {TESTIMONIALS.map((t) => (
-            <TestimonialCard key={t.quote} {...t} />
-          ))}
-        </Marquee>
-        <Marquee reverse pauseOnHover className="[--duration:42s]">
-          {TESTIMONIALS.map((t) => (
-            <TestimonialCard key={t.quote} {...t} />
-          ))}
-        </Marquee>
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-background to-transparent" />
-      </div>
+      <BlurFade delay={0.1} inView>
+        <div className="relative mt-12">
+          <Marquee pauseOnHover className="[--duration:38s]">
+            {TESTIMONIALS.map((t) => (
+              <TestimonialCard key={t.quote} {...t} />
+            ))}
+          </Marquee>
+          <Marquee reverse pauseOnHover className="[--duration:42s]">
+            {TESTIMONIALS.map((t) => (
+              <TestimonialCard key={t.quote} {...t} />
+            ))}
+          </Marquee>
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-background to-transparent" />
+        </div>
+      </BlurFade>
     </section>
   )
 }
