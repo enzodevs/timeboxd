@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { QueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-import type { Task } from "@/db/schema"
+import type { Task, Timebox } from "@/db/schema"
 import {
   createTask,
   deleteTask,
@@ -11,6 +11,7 @@ import {
   updateTask,
 } from "@/server/tasks"
 import type { TaskLists } from "@/server/tasks"
+import { timeboxesKey } from "@/hooks/use-timeboxes"
 
 export const tasksKey = (date: string) => ["tasks", date] as const
 
@@ -85,19 +86,35 @@ export function useTaskMutations(date: string) {
 
   // Undo beats confirmation for reversible deletes: remove from the UI now,
   // show an undo toast, and only hit the server once the toast expires.
+  // Deleting a to-do also removes the time-box it spawned (matching the server
+  // cascade), so we optimistically drop linked boxes from the current day too.
+  const boxesKey = timeboxesKey(date)
   const removeWithUndo = (id: string) => {
     const prev = qc.getQueryData<TaskLists>(key)
+    const prevBoxes = qc.getQueryData<Timebox[]>(boxesKey)
+    const restore = () => {
+      if (prev) qc.setQueryData<TaskLists>(key, prev)
+      if (prevBoxes) qc.setQueryData<Timebox[]>(boxesKey, prevBoxes)
+    }
     if (prev)
       qc.setQueryData<TaskLists>(key, {
         today: prev.today.filter((t) => t.id !== id),
         later: prev.later.filter((t) => t.id !== id),
       })
+    if (prevBoxes)
+      qc.setQueryData<Timebox[]>(
+        boxesKey,
+        prevBoxes.filter((b) => b.taskId !== id)
+      )
     let undone = false
     const commit = () => {
       if (undone) return
       void deleteTask({ data: { id } })
-        .catch(() => prev && qc.setQueryData<TaskLists>(key, prev))
-        .finally(() => qc.invalidateQueries({ queryKey: key }))
+        .catch(restore)
+        .finally(() => {
+          void qc.invalidateQueries({ queryKey: key })
+          void qc.invalidateQueries({ queryKey: boxesKey })
+        })
     }
     toast("To-do deleted", {
       duration: 6000,
@@ -105,7 +122,7 @@ export function useTaskMutations(date: string) {
         label: "Undo",
         onClick: () => {
           undone = true
-          if (prev) qc.setQueryData<TaskLists>(key, prev)
+          restore()
         },
       },
       onAutoClose: commit,
@@ -113,7 +130,21 @@ export function useTaskMutations(date: string) {
     })
   }
 
-  return { create, update, remove, removeWithUndo, reorder }
+  // Promote a to-do into the day's top-3, or demote it. Demotion is always
+  // allowed; promotion is capped at 3 so the list stays a real shortlist.
+  const togglePriority = (task: Task) => {
+    if (!task.priority) {
+      const lists = qc.getQueryData<TaskLists>(key)
+      const count = lists?.today.filter((t) => t.priority).length ?? 0
+      if (count >= 3) {
+        toast("Only 3 top priorities — demote one first")
+        return
+      }
+    }
+    update.mutate({ id: task.id, patch: { priority: !task.priority } })
+  }
+
+  return { create, update, remove, removeWithUndo, reorder, togglePriority }
 }
 
 /** Optimistically write the full lists into the cache (used during drag-drop). */

@@ -55,7 +55,7 @@ export function BorderBeam({
     >
       <motion.div
         aria-hidden
-        className="absolute top-1/2 left-1/2 aspect-square w-[150%] rounded-full"
+        className="absolute top-1/2 left-1/2 h-[150%] w-[150%] rounded-full"
         style={{
           translateX: "-50%",
           translateY: "-50%",

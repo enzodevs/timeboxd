@@ -126,6 +126,10 @@ export const tasks = sqliteTable(
       .notNull()
       .default(false),
     completedAt: text("completed_at"),
+    /** One of the day's (max 3) top priorities. Only meaningful for "today". */
+    priority: integer("priority", { mode: "boolean" })
+      .notNull()
+      .default(false),
     /** "today" | "later" */
     list: text("list").notNull().default("today"),
     /** "YYYY-MM-DD" for dated tasks; null for the "later" backlog. */

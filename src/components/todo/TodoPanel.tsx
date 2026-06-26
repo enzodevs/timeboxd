@@ -3,6 +3,7 @@ import { CursorClickIcon, ListChecksIcon } from "@phosphor-icons/react"
 import type { Task } from "@/db/schema"
 import { useTasks } from "@/hooks/use-tasks"
 import { TodoInput } from "./TodoInput"
+import { PriorityZone } from "./PriorityZone"
 import { SortableTaskList } from "./SortableTaskList"
 import { TaskListSkeleton } from "./TaskListSkeleton"
 
@@ -42,6 +43,8 @@ export function TodoPanel({
 }: TodoPanelProps) {
   const { data, isLoading } = useTasks(date)
   const today = data?.today ?? []
+  const priorities = today.filter((t) => t.priority)
+  const rest = today.filter((t) => !t.priority)
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-3 p-3">
@@ -55,13 +58,22 @@ export function TodoPanel({
         )}
       </div>
       <TodoInput date={date} readOnly={readOnly} />
+      {isLoading ? null : (
+        <PriorityZone
+          date={date}
+          tasks={priorities}
+          googleConnected={googleConnected}
+          onViewInGoogle={onViewInGoogle}
+          readOnly={readOnly}
+        />
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <TaskListSkeleton />
         ) : (
           <SortableTaskList
             id="today"
-            tasks={today}
+            tasks={rest}
             date={date}
             googleConnected={googleConnected}
             onViewInGoogle={onViewInGoogle}

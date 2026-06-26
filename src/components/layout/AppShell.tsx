@@ -9,7 +9,6 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
@@ -52,6 +51,12 @@ import { BorderBeam } from "@/components/magicui/border-beam"
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v))
+
+const MOBILE_TABS = [
+  { id: "todo", label: "To-dos", Icon: ListChecksIcon },
+  { id: "timeline", label: "Timeline", Icon: CalendarBlankIcon },
+  { id: "notes", label: "Notes", Icon: NotePencilIcon },
+] as const
 
 export function AppShell({ access }: { access: AccessState }) {
   const qc = useQueryClient()
@@ -161,68 +166,69 @@ export function AppShell({ access }: { access: AccessState }) {
     const lists = qc.getQueryData<TaskLists>(tasksKey(date))
     if (!lists) return
     const id = String(active.id)
-    const source: "today" | "later" | null = lists.today.some(
-      (t) => t.id === id
-    )
-      ? "today"
-      : lists.later.some((t) => t.id === id)
-        ? "later"
-        : null
-    if (!source) return
-    const task = (source === "today" ? lists.today : lists.later).find(
-      (t) => t.id === id
-    )!
+
+    const task =
+      lists.today.find((t) => t.id === id) ??
+      lists.later.find((t) => t.id === id)
+    if (!task) return
 
     if (over.id === CALENDAR_DROPPABLE) {
       createTimeboxFromDrop(task, e)
       return
     }
 
-    const overId = String(over.id)
-    const target: "today" | "later" =
-      overId === "today" || overId === "later"
-        ? overId
-        : lists.today.some((t) => t.id === overId)
-          ? "today"
-          : lists.later.some((t) => t.id === overId)
-            ? "later"
-            : source
-
-    const today = [...lists.today]
+    // Three logical buckets: the day's priorities, the rest of "today" (the
+    // brain dump), and the undated "later" backlog. Priorities are a subset of
+    // "today" (priority flag), so promote/demote is just moving between buckets.
+    const prio = lists.today.filter((t) => t.priority)
+    const rest = lists.today.filter((t) => !t.priority)
     const later = [...lists.later]
+    const buckets = { priority: prio, today: rest, later } as const
+    type Bucket = keyof typeof buckets
+    const bucketOf = (taskId: string): Bucket | null =>
+      prio.some((t) => t.id === taskId)
+        ? "priority"
+        : rest.some((t) => t.id === taskId)
+          ? "today"
+          : later.some((t) => t.id === taskId)
+            ? "later"
+            : null
 
-    if (source === target) {
-      const arr = source === "today" ? today : later
-      const fromIdx = arr.findIndex((t) => t.id === id)
-      const overIdx =
-        overId === target
-          ? arr.length - 1
-          : arr.findIndex((t) => t.id === overId)
-      const moved = arrayMove(
-        arr,
-        fromIdx,
-        overIdx < 0 ? arr.length - 1 : overIdx
-      )
-      if (source === "today") today.splice(0, today.length, ...moved)
-      else later.splice(0, later.length, ...moved)
-    } else {
-      const srcArr = source === "today" ? today : later
-      const tgtArr = target === "today" ? today : later
-      const fromIdx = srcArr.findIndex((t) => t.id === id)
-      srcArr.splice(fromIdx, 1)
-      const updated: Task = {
-        ...task,
-        list: target,
-        date: target === "later" ? null : date,
-      }
-      let toIdx =
-        overId === target
-          ? tgtArr.length
-          : tgtArr.findIndex((t) => t.id === overId)
-      if (toIdx < 0) toIdx = tgtArr.length
-      tgtArr.splice(toIdx, 0, updated)
+    const source = bucketOf(id)
+    if (!source) return
+
+    const overId = String(over.id)
+    const isContainer =
+      overId === "priority" || overId === "today" || overId === "later"
+    const target: Bucket = isContainer
+      ? overId
+      : (bucketOf(overId) ?? source)
+
+    // Promotion is capped at 3 — refuse the drop and leave things as they were.
+    if (target === "priority" && source !== "priority" && prio.length >= 3) {
+      toast("Only 3 top priorities — demote one first")
+      return
     }
 
+    const srcArr = buckets[source]
+    const tgtArr = buckets[target]
+    const fromIdx = srcArr.findIndex((t) => t.id === id)
+    const [moved] = srcArr.splice(fromIdx, 1)
+    if (!moved) return
+    const updated: Task = {
+      ...moved,
+      priority: target === "priority",
+      list: target === "later" ? "later" : "today",
+      date: target === "later" ? null : date,
+    }
+    let toIdx = isContainer
+      ? tgtArr.length
+      : tgtArr.findIndex((t) => t.id === overId)
+    if (toIdx < 0) toIdx = tgtArr.length
+    tgtArr.splice(toIdx, 0, updated)
+
+    // Rebuild "today" with priorities first so slot order is stable.
+    const today = [...prio, ...rest]
     setTasksCache(qc, date, { today, later })
     reorder.mutate([
       ...today.map((t, i) => ({
@@ -230,12 +236,14 @@ export function AppShell({ access }: { access: AccessState }) {
         sortOrder: i,
         list: "today" as const,
         date,
+        priority: t.priority,
       })),
       ...later.map((t, i) => ({
         id: t.id,
         sortOrder: i,
         list: "later" as const,
         date: null,
+        priority: false,
       })),
     ])
   }
@@ -409,16 +417,10 @@ export function AppShell({ access }: { access: AccessState }) {
       {!isDesktop ? (
         <nav
           aria-label="Panels"
-          className="flex shrink-0 border-t border-border bg-background/95 backdrop-blur"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          className="flex shrink-0 items-stretch gap-1 border-t border-border bg-background/95 px-2 pt-1.5 backdrop-blur"
+          style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}
         >
-          {(
-            [
-              { id: "todo", label: "To-dos", Icon: ListChecksIcon },
-              { id: "timeline", label: "Timeline", Icon: CalendarBlankIcon },
-              { id: "notes", label: "Notes", Icon: NotePencilIcon },
-            ] as const
-          ).map(({ id, label, Icon }) => {
+          {MOBILE_TABS.map(({ id, label, Icon }) => {
             const active = mobilePane === id
             return (
               <button
@@ -427,14 +429,35 @@ export function AppShell({ access }: { access: AccessState }) {
                 aria-current={active ? "page" : undefined}
                 onClick={() => setMobilePane(id)}
                 className={cn(
-                  "flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                  "group/tab relative flex min-h-14 flex-1 touch-manipulation flex-col items-center justify-center rounded-xl text-[11px] font-medium transition-transform outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.94]",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Icon className="size-5" weight={active ? "fill" : "regular"} />
-                {label}
+                {/* Active pill — sits behind the icon + label. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute inset-x-2 inset-y-1 rounded-xl bg-primary/10 transition-opacity duration-200",
+                    active ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {/* Top accent line on the active tab. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute top-0 h-0.5 w-7 rounded-full bg-primary transition-opacity duration-200",
+                    active ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <span className="relative flex flex-col items-center gap-1">
+                  <Icon
+                    className="size-5 transition-transform group-active/tab:scale-90"
+                    weight={active ? "fill" : "regular"}
+                  />
+                  {label}
+                </span>
               </button>
             )
           })}

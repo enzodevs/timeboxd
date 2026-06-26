@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react"
 import { toast } from "sonner"
 
-import { signIn } from "@/lib/auth-client"
+import { signIn, signUp } from "@/lib/auth-client"
 import { getSession } from "@/server/session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,6 +80,38 @@ function LoginPage() {
     }
   }
 
+  // Local-only escape hatch: sign in with a seeded email/password account so
+  // you can test without Google OAuth configured. `import.meta.env.DEV` is
+  // statically false in production builds, so this whole path is tree-shaken out.
+  async function continueAsDev() {
+    setSubmitting(true)
+    const creds = {
+      email: "dev@timeboxd.local",
+      password: "dev-password-123",
+      name: "Dev User",
+    }
+    try {
+      const created = await signUp.email(creds)
+      if (created.error) {
+        // Most likely the account already exists — just sign in.
+        const signed = await signIn.email({
+          email: creds.email,
+          password: creds.password,
+        })
+        if (signed.error) {
+          toast.error(signed.error.message ?? "Dev sign-in failed")
+          setSubmitting(false)
+          return
+        }
+      }
+      // Full navigation so the SSR loader picks up the new session cookie.
+      window.location.href = safeRedirect
+    } catch {
+      toast.error("Dev sign-in failed")
+      setSubmitting(false)
+    }
+  }
+
   async function sendMagicLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (submitting || !magicLinkEnabled) return
@@ -105,28 +137,36 @@ function LoginPage() {
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
-      {/* Animated aurora gradient backdrop — pure CSS, works on every browser. */}
+      {/* Branded aurora backdrop — pure CSS. Emerald brand glow (driven by
+          --primary so it tracks the theme) over a deep emerald-tinted base.
+          Transform-only animation, reduced-motion safe. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4c1d95 100%)",
+              "linear-gradient(150deg, oklch(0.21 0.03 166) 0%, oklch(0.16 0.024 168) 52%, oklch(0.12 0.018 172) 100%)",
           }}
         />
         <div className="tb-aurora tb-aurora-a" />
         <div className="tb-aurora tb-aurora-b" />
         <div className="tb-aurora tb-aurora-c" />
-        {/* Readability scrim — stronger under the form column on desktop. */}
-        <div className="absolute inset-0 bg-background/50 lg:right-1/2 lg:bg-background/35" />
+        {/* Vignette — pulls focus to the centre, softens the edges. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 38%, transparent 34%, rgba(0,0,0,0.45) 100%)",
+          }}
+        />
         <style>{`
-          .tb-aurora{position:absolute;border-radius:9999px;filter:blur(70px);opacity:.6;mix-blend-mode:screen;will-change:transform}
-          .tb-aurora-a{width:55vmax;height:55vmax;left:42%;top:-12%;background:radial-gradient(circle at center,#7c3aed,transparent 60%);animation:tb-drift-a 19s ease-in-out infinite alternate}
-          .tb-aurora-b{width:46vmax;height:46vmax;left:58%;top:38%;background:radial-gradient(circle at center,#ec4899,transparent 60%);animation:tb-drift-b 23s ease-in-out infinite alternate}
-          .tb-aurora-c{width:50vmax;height:50vmax;left:30%;top:55%;background:radial-gradient(circle at center,#4f46e5,transparent 60%);animation:tb-drift-c 27s ease-in-out infinite alternate}
-          @keyframes tb-drift-a{from{transform:translate(-10%,-5%) scale(1)}to{transform:translate(15%,12%) scale(1.2)}}
-          @keyframes tb-drift-b{from{transform:translate(6%,-10%) scale(1.1)}to{transform:translate(-16%,6%) scale(.9)}}
-          @keyframes tb-drift-c{from{transform:translate(-6%,6%) scale(1)}to{transform:translate(12%,-10%) scale(1.15)}}
+          .tb-aurora{position:absolute;border-radius:9999px;filter:blur(80px);opacity:.5;mix-blend-mode:screen;will-change:transform}
+          .tb-aurora-a{width:55vmax;height:55vmax;left:38%;top:-15%;background:radial-gradient(circle at center,var(--primary),transparent 60%);animation:tb-drift-a 21s ease-in-out infinite alternate}
+          .tb-aurora-b{width:48vmax;height:48vmax;left:60%;top:40%;background:radial-gradient(circle at center,oklch(0.74 0.12 188),transparent 60%);animation:tb-drift-b 25s ease-in-out infinite alternate}
+          .tb-aurora-c{width:52vmax;height:52vmax;left:24%;top:58%;background:radial-gradient(circle at center,oklch(0.6 0.14 158),transparent 62%);animation:tb-drift-c 29s ease-in-out infinite alternate}
+          @keyframes tb-drift-a{from{transform:translate(-10%,-5%) scale(1)}to{transform:translate(14%,12%) scale(1.18)}}
+          @keyframes tb-drift-b{from{transform:translate(6%,-10%) scale(1.1)}to{transform:translate(-15%,6%) scale(.92)}}
+          @keyframes tb-drift-c{from{transform:translate(-6%,6%) scale(1)}to{transform:translate(12%,-10%) scale(1.14)}}
           @media (prefers-reduced-motion:reduce){.tb-aurora{animation:none}}
         `}</style>
       </div>
@@ -134,7 +174,7 @@ function LoginPage() {
       <div className="relative z-10 grid min-h-screen lg:grid-cols-2">
         {/* Left — auth card */}
         <div className="flex items-center justify-center p-5 sm:p-8">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-card/70 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-8 dark:bg-card/55">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-card/75 p-6 shadow-[0_24px_70px_-20px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-white/10 backdrop-blur-2xl sm:p-8 dark:bg-card/60">
             <div className="mb-6 flex items-center gap-3">
               <img
                 src="/timebox-icon.webp"
@@ -245,6 +285,24 @@ function LoginPage() {
                 Back to landing
               </Link>
             </div>
+
+            {import.meta.env.DEV ? (
+              <div className="mt-5 border-t border-dashed border-border/70 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={continueAsDev}
+                  disabled={submitting}
+                >
+                  Continue as dev user
+                </Button>
+                <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                  Local dev only · bypasses OAuth
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
 

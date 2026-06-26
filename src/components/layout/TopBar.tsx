@@ -6,6 +6,7 @@ import {
   CalendarBlankIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  DotsThreeVerticalIcon,
   GearSixIcon,
   MagnifyingGlassIcon,
   MoonIcon,
@@ -19,6 +20,13 @@ import { cn } from "@/lib/utils"
 import { clearGhosttyTheme } from "@/themes/ghostty-theme"
 import { OPEN_SEARCH_EVENT } from "@/components/search/CommandPalette"
 import { Calendar } from "@/components/ui/calendar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Popover,
   PopoverContent,
@@ -100,8 +108,11 @@ export function TopBar({
               title="Pick a date"
               className="flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition hover:bg-muted data-[state=open]:bg-muted sm:min-w-[13rem]"
             >
-              <CalendarBlankIcon className="size-4 text-muted-foreground" />
-              <span className="truncate tabular-nums">
+              <CalendarBlankIcon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate tabular-nums sm:hidden">
+                {format(d, "MMM d")}
+              </span>
+              <span className="hidden truncate tabular-nums sm:inline">
                 {format(d, "EEEE, MMMM d")}
               </span>
               {isToday ? (
@@ -175,7 +186,7 @@ export function TopBar({
           type="button"
           aria-label="Toggle theme"
           onClick={toggleTheme}
-          className={iconBtn}
+          className={cn(iconBtn, "max-sm:hidden")}
         >
           <SunIcon className="hidden size-4 dark:block" />
           <MoonIcon className="size-4 dark:hidden" />
@@ -195,10 +206,35 @@ export function TopBar({
           type="button"
           aria-label="Sign out"
           onClick={() => void logout()}
-          className={iconBtn}
+          className={cn(iconBtn, "max-sm:hidden")}
         >
           <SignOutIcon className="size-4" />
         </button>
+
+        {/* Mobile overflow: keeps the header from crowding on small screens. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="More"
+              className={cn(iconBtn, "sm:hidden")}
+            >
+              <DotsThreeVerticalIcon weight="bold" className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onSelect={toggleTheme}>
+              <SunIcon className="hidden dark:block" />
+              <MoonIcon className="dark:hidden" />
+              {resolvedTheme === "dark" ? "Light theme" : "Dark theme"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => void logout()}>
+              <SignOutIcon />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

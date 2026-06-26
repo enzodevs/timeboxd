@@ -142,7 +142,7 @@ export function Features() {
         title="Everything you need to run your day"
         subtitle="Plan, schedule, and reflect without leaving the keyboard — or the page."
       />
-      <div className="mt-12 grid auto-rows-[minmax(0,1fr)] grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="mt-12 grid grid-cols-1 gap-4 md:auto-rows-[minmax(0,1fr)] md:grid-cols-4">
         {FEATURES.map((feature, i) => (
           <BlurFade
             key={feature.title}

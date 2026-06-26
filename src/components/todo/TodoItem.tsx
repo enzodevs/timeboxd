@@ -9,6 +9,7 @@ import {
   CopyIcon,
   DotsThreeIcon,
   GoogleLogoIcon,
+  StarIcon,
   TagIcon,
   TrashIcon,
 } from "@phosphor-icons/react"
@@ -49,7 +50,9 @@ export function TagChip({ tag }: { tag: string }) {
 interface TodoItemProps {
   task: Task
   date: string
-  containerId: "today" | "later"
+  containerId: "today" | "later" | "priority"
+  /** When set (1–3), renders the leading top-priority slot number. */
+  slot?: number
   googleConnected?: boolean
   onViewInGoogle?: (task: Task) => void
   readOnly?: boolean
@@ -58,11 +61,12 @@ interface TodoItemProps {
 export function TodoItem({
   task,
   date,
+  slot,
   googleConnected,
   onViewInGoogle,
   readOnly,
 }: TodoItemProps) {
-  const { update, removeWithUndo, create } = useTaskMutations(date)
+  const { update, removeWithUndo, create, togglePriority } = useTaskMutations(date)
   const { create: createBox } = useTimeboxMutations(date)
   const [tagOpen, setTagOpen] = React.useState(false)
 
@@ -150,6 +154,12 @@ export function TodoItem({
           <BrainIcon />
           {task.deepWork ? "Unmark deep work" : "Mark as deep work"}
         </M.Item>
+        {task.list === "today" ? (
+          <M.Item onSelect={() => togglePriority(task)}>
+            <StarIcon />
+            {task.priority ? "Remove from priorities" : "Make a priority"}
+          </M.Item>
+        ) : null}
         <M.Item onSelect={duplicate}>
           <CopyIcon />
           Duplicate to-do
@@ -174,7 +184,12 @@ export function TodoItem({
               onSelect={() =>
                 update.mutate({
                   id: task.id,
-                  patch: { list: "later", date: null, sortOrder: Date.now() },
+                  patch: {
+                    list: "later",
+                    date: null,
+                    priority: false,
+                    sortOrder: Date.now(),
+                  },
                 })
               }
             >
@@ -217,6 +232,15 @@ export function TodoItem({
             isDragging && "z-10 opacity-60 shadow-[var(--elevation-high)]"
           )}
         >
+          {slot ? (
+            <span
+              aria-hidden
+              className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 font-mono text-[11px] font-semibold text-primary tabular-nums"
+            >
+              {slot}
+            </span>
+          ) : null}
+
           <button
             type="button"
             disabled={readOnly}
@@ -268,6 +292,28 @@ export function TodoItem({
               {formatScheduled(task.scheduledTime)}
             </span>
           )}
+
+          {task.list === "today" && !readOnly ? (
+            <button
+              type="button"
+              aria-label={
+                task.priority ? "Remove from priorities" : "Make a priority"
+              }
+              aria-pressed={task.priority}
+              onClick={() => togglePriority(task)}
+              className={cn(
+                "relative flex size-7 shrink-0 items-center justify-center rounded-md transition outline-none after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:ring-ring/50",
+                task.priority
+                  ? "text-primary"
+                  : "text-muted-foreground/50 hover:text-primary focus-visible:opacity-100 md:opacity-0 md:group-hover/item:opacity-100"
+              )}
+            >
+              <StarIcon
+                weight={task.priority ? "fill" : "regular"}
+                className="size-4"
+              />
+            </button>
+          ) : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

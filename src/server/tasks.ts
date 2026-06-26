@@ -4,7 +4,7 @@ import { z } from "zod"
 
 import { db } from "@/db/client"
 import { ensureDb } from "@/db/migrate"
-import { tasks } from "@/db/schema"
+import { tasks, timeboxes } from "@/db/schema"
 import type { Task } from "@/db/schema"
 import { authMiddleware } from "@/lib/auth-middleware"
 import { subscriptionMiddleware } from "@/lib/subscription-middleware"
@@ -15,6 +15,7 @@ const createInput = z.object({
   title: z.string().trim().min(1),
   tags: z.array(z.string()).optional(),
   deepWork: z.boolean().optional(),
+  priority: z.boolean().optional(),
   list: z.enum(["today", "later"]).optional(),
   date: z.string().nullable().optional(),
   scheduledTime: z.string().nullable().optional(),
@@ -25,6 +26,7 @@ const patchInput = z.object({
   title: z.string().trim().min(1).optional(),
   tags: z.array(z.string()).optional(),
   deepWork: z.boolean().optional(),
+  priority: z.boolean().optional(),
   completed: z.boolean().optional(),
   list: z.enum(["today", "later"]).optional(),
   date: z.string().nullable().optional(),
@@ -90,6 +92,7 @@ export const createTask = createServerFn({ method: "POST" })
         title: data.title,
         tags: data.tags ?? [],
         deepWork: data.deepWork ?? false,
+        priority: data.priority ?? false,
         list,
         date,
         scheduledTime: data.scheduledTime ?? null,
@@ -133,6 +136,7 @@ export const reorderTasks = createServerFn({ method: "POST" })
         sortOrder: number
         list?: "today" | "later"
         date?: string | null
+        priority?: boolean
       }>
     }) => d
   )
@@ -146,6 +150,7 @@ export const reorderTasks = createServerFn({ method: "POST" })
       }
       if (u.list !== undefined) set.list = u.list
       if (u.date !== undefined) set.date = u.list === "later" ? null : u.date
+      if (u.priority !== undefined) set.priority = u.priority
       await db
         .update(tasks)
         .set(set)
@@ -159,9 +164,16 @@ export const deleteTask = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     await ensureDb()
+    const { userId } = context
+    // A to-do owns the time-box it spawned: deleting the to-do removes its box
+    // too (the box keeps a `taskId` back-reference). One-directional — deleting
+    // a box leaves the to-do so it can be re-scheduled.
+    await db
+      .delete(timeboxes)
+      .where(and(eq(timeboxes.taskId, data.id), eq(timeboxes.userId, userId)))
     await db
       .delete(tasks)
-      .where(and(eq(tasks.id, data.id), eq(tasks.userId, context.userId)))
+      .where(and(eq(tasks.id, data.id), eq(tasks.userId, userId)))
     return { ok: true }
   })
 
