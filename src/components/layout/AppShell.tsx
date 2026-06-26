@@ -13,7 +13,14 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
+import {
+  ListChecksIcon,
+  CalendarBlankIcon,
+  NotePencilIcon,
+} from "@phosphor-icons/react"
 
+import { cn } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import type { Task, Timebox } from "@/db/schema"
 import type { AccessState } from "@/server/billing"
 import { CALENDAR_DROPPABLE } from "@/lib/dnd"
@@ -52,6 +59,10 @@ export function AppShell({ access }: { access: AccessState }) {
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const [activeTask, setActiveTask] = React.useState<Task | null>(null)
   const gridRef = React.useRef<HTMLDivElement | null>(null)
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const [mobilePane, setMobilePane] = React.useState<
+    "todo" | "timeline" | "notes"
+  >("timeline")
 
   const { reorder } = useTaskMutations(date)
   const { create: createBox } = useTimeboxMutations(date)
@@ -295,47 +306,96 @@ export function AppShell({ access }: { access: AccessState }) {
         onDragStart={readOnly ? undefined : onDragStart}
         onDragEnd={readOnly ? undefined : onDragEnd}
       >
-        <ResizablePanelGroup orientation="horizontal" className="flex-1">
-          <ResizablePanel defaultSize="27%" minSize="260px" className="min-w-0">
-            <ResizablePanelGroup orientation="vertical">
-              <ResizablePanel defaultSize="62%" minSize="160px">
-                <TodoPanel
-                  date={date}
-                  googleConnected={googleConnected}
-                  onViewInGoogle={viewTaskInGoogle}
-                  readOnly={readOnly}
-                />
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize="38%" minSize="120px">
-                <TodoLaterPanel
-                  date={date}
-                  googleConnected={googleConnected}
-                  onViewInGoogle={viewTaskInGoogle}
-                  readOnly={readOnly}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
+        {isDesktop ? (
+          <ResizablePanelGroup orientation="horizontal" className="flex-1">
+            <ResizablePanel
+              defaultSize="27%"
+              minSize="260px"
+              className="min-w-0"
+            >
+              <ResizablePanelGroup orientation="vertical">
+                <ResizablePanel defaultSize="62%" minSize="160px">
+                  <TodoPanel
+                    date={date}
+                    googleConnected={googleConnected}
+                    onViewInGoogle={viewTaskInGoogle}
+                    readOnly={readOnly}
+                  />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize="38%" minSize="120px">
+                  <TodoLaterPanel
+                    date={date}
+                    googleConnected={googleConnected}
+                    onViewInGoogle={viewTaskInGoogle}
+                    readOnly={readOnly}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
 
-          <ResizableHandle withHandle />
+            <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize="45%" minSize="420px" className="min-w-0">
-            <CalendarColumn
-              date={date}
-              gridRef={gridRef}
-              googleConnected={googleConnected}
-              onViewInGoogle={viewBoxInGoogle}
-              readOnly={readOnly}
-            />
-          </ResizablePanel>
+            <ResizablePanel
+              defaultSize="45%"
+              minSize="420px"
+              className="min-w-0"
+            >
+              <CalendarColumn
+                date={date}
+                gridRef={gridRef}
+                googleConnected={googleConnected}
+                onViewInGoogle={viewBoxInGoogle}
+                readOnly={readOnly}
+              />
+            </ResizablePanel>
 
-          <ResizableHandle withHandle />
+            <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize="28%" minSize="280px" className="min-w-0">
-            <NotesPanel date={date} readOnly={readOnly} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            <ResizablePanel
+              defaultSize="28%"
+              minSize="280px"
+              className="min-w-0"
+            >
+              <NotesPanel date={date} readOnly={readOnly} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          /* Mobile: one pane at a time, switched by the bottom tab bar. Only
+             the active pane is mounted so dnd-kit droppable ids stay unique. */
+          <div className="min-h-0 flex-1">
+            {mobilePane === "todo" ? (
+              <div className="flex h-full min-h-0 flex-col divide-y divide-border">
+                <div className="min-h-0 flex-1">
+                  <TodoPanel
+                    date={date}
+                    googleConnected={googleConnected}
+                    onViewInGoogle={viewTaskInGoogle}
+                    readOnly={readOnly}
+                  />
+                </div>
+                <div className="min-h-0 flex-1">
+                  <TodoLaterPanel
+                    date={date}
+                    googleConnected={googleConnected}
+                    onViewInGoogle={viewTaskInGoogle}
+                    readOnly={readOnly}
+                  />
+                </div>
+              </div>
+            ) : mobilePane === "timeline" ? (
+              <CalendarColumn
+                date={date}
+                gridRef={gridRef}
+                googleConnected={googleConnected}
+                onViewInGoogle={viewBoxInGoogle}
+                readOnly={readOnly}
+              />
+            ) : (
+              <NotesPanel date={date} readOnly={readOnly} />
+            )}
+          </div>
+        )}
 
         <DragOverlay dropAnimation={null}>
           {activeTask ? (
@@ -345,6 +405,41 @@ export function AppShell({ access }: { access: AccessState }) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {!isDesktop ? (
+        <nav
+          aria-label="Panels"
+          className="flex shrink-0 border-t border-border bg-background/95 backdrop-blur"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {(
+            [
+              { id: "todo", label: "To-dos", Icon: ListChecksIcon },
+              { id: "timeline", label: "Timeline", Icon: CalendarBlankIcon },
+              { id: "notes", label: "Notes", Icon: NotePencilIcon },
+            ] as const
+          ).map(({ id, label, Icon }) => {
+            const active = mobilePane === id
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => setMobilePane(id)}
+                className={cn(
+                  "flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="size-5" weight={active ? "fill" : "regular"} />
+                {label}
+              </button>
+            )
+          })}
+        </nav>
+      ) : null}
 
       <CommandPalette
         date={date}

@@ -72,7 +72,7 @@ export function Timebox({
   onViewInGoogle,
   readOnly,
 }: TimeboxProps) {
-  const { update, remove, create } = useTimeboxMutations(date)
+  const { update, removeWithUndo, create } = useTimeboxMutations(date)
   const [draft, setDraft] = React.useState<{
     start: number
     end: number
@@ -289,7 +289,7 @@ export function Timebox({
           </M.SubContent>
         </M.Sub>
         <M.Separator />
-        <M.Item variant="destructive" onSelect={() => remove.mutate(box.id)}>
+        <M.Item variant="destructive" onSelect={() => removeWithUndo(box.id)}>
           <TrashIcon />
           Delete timebox
         </M.Item>
@@ -391,7 +391,7 @@ export function Timebox({
               )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover/box:opacity-100">
+            <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition group-focus-within/box:opacity-100 md:opacity-0 md:group-hover/box:opacity-100">
               <button
                 type="button"
                 disabled={readOnly}
@@ -404,7 +404,7 @@ export function Timebox({
                   })
                 }
                 className={cn(
-                  "flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground disabled:pointer-events-none",
+                  "flex size-6 items-center justify-center rounded text-muted-foreground transition outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none",
                   box.completed && "text-primary"
                 )}
               >
@@ -416,7 +416,7 @@ export function Timebox({
                     type="button"
                     aria-label="Timebox actions"
                     onPointerDown={(e) => e.stopPropagation()}
-                    className="flex size-5 items-center justify-center rounded text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground"
+                    className="flex size-6 items-center justify-center rounded text-muted-foreground transition outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     <DotsThreeIcon weight="bold" className="size-4" />
                   </button>

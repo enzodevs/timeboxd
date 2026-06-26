@@ -3,6 +3,7 @@ import { CalendarPlusIcon, SwapIcon } from "@phosphor-icons/react"
 import type { Task } from "@/db/schema"
 import { useTasks } from "@/hooks/use-tasks"
 import { SortableTaskList } from "./SortableTaskList"
+import { TaskListSkeleton } from "./TaskListSkeleton"
 
 function EmptyLater() {
   return (
@@ -28,7 +29,7 @@ export function TodoLaterPanel({
   onViewInGoogle,
   readOnly,
 }: TodoLaterPanelProps) {
-  const { data } = useTasks(date)
+  const { data, isLoading } = useTasks(date)
   const later = data?.later ?? []
 
   return (
@@ -43,15 +44,19 @@ export function TodoLaterPanel({
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <SortableTaskList
-          id="later"
-          tasks={later}
-          date={date}
-          googleConnected={googleConnected}
-          onViewInGoogle={onViewInGoogle}
-          readOnly={readOnly}
-          empty={<EmptyLater />}
-        />
+        {isLoading ? (
+          <TaskListSkeleton rows={3} />
+        ) : (
+          <SortableTaskList
+            id="later"
+            tasks={later}
+            date={date}
+            googleConnected={googleConnected}
+            onViewInGoogle={onViewInGoogle}
+            readOnly={readOnly}
+            empty={<EmptyLater />}
+          />
+        )}
       </div>
     </section>
   )

@@ -162,7 +162,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
               disabled={b.disabled}
               onClick={b.run}
               className={cn(
-                "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
+                "flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40 md:size-7 [&_svg]:size-4",
                 b.isActive && "bg-accent text-accent-foreground"
               )}
             >

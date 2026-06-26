@@ -62,7 +62,7 @@ export function TodoItem({
   onViewInGoogle,
   readOnly,
 }: TodoItemProps) {
-  const { update, remove, create } = useTaskMutations(date)
+  const { update, removeWithUndo, create } = useTaskMutations(date)
   const { create: createBox } = useTimeboxMutations(date)
   const [tagOpen, setTagOpen] = React.useState(false)
 
@@ -198,7 +198,7 @@ export function TodoItem({
           Add tag
         </M.Item>
         <M.Separator />
-        <M.Item variant="destructive" onSelect={() => remove.mutate(task.id)}>
+        <M.Item variant="destructive" onSelect={() => removeWithUndo(task.id)}>
           <TrashIcon />
           Delete to-do
         </M.Item>
@@ -223,7 +223,7 @@ export function TodoItem({
             onClick={toggleDone}
             aria-label={task.completed ? "Mark as not done" : "Mark as done"}
             className={cn(
-              "shrink-0 text-muted-foreground/60 transition-colors hover:text-primary disabled:pointer-events-none",
+              "relative shrink-0 rounded text-muted-foreground/60 transition-colors outline-none after:absolute after:-inset-3 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:after:hidden",
               task.completed && "text-primary"
             )}
           >
@@ -234,7 +234,7 @@ export function TodoItem({
             {...(readOnly ? {} : attributes)}
             {...(readOnly ? {} : listeners)}
             className={cn(
-              "min-w-0 flex-1",
+              "min-w-0 flex-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
               readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing"
             )}
           >
@@ -274,7 +274,7 @@ export function TodoItem({
               <button
                 type="button"
                 aria-label="To-do actions"
-                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition group-hover/item:opacity-100 hover:bg-muted hover:text-foreground aria-expanded:opacity-100"
+                className="relative flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-100 transition outline-none after:absolute after:-inset-2 hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 aria-expanded:opacity-100 md:opacity-0 md:group-hover/item:opacity-100"
               >
                 <DotsThreeIcon weight="bold" className="size-4" />
               </button>

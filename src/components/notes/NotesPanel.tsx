@@ -11,6 +11,7 @@ import {
 
 import type { JsonValue } from "@/db/schema"
 import { useNote, useSaveNote } from "@/hooks/use-notes"
+import { Skeleton } from "@/components/ui/skeleton"
 import { EditorToolbar } from "./EditorToolbar"
 import { NotesSlashMenu } from "./SlashMenu"
 
@@ -21,7 +22,7 @@ export function NotesPanel({
   date: string
   readOnly?: boolean
 }) {
-  const { data: note, isFetching } = useNote(date)
+  const { data: note, isFetching, isLoading } = useNote(date)
   const save = useSaveNote(date)
 
   const applying = React.useRef(false)
@@ -90,14 +91,16 @@ export function NotesPanel({
           <button
             type="button"
             title="Pin notes"
-            className="flex size-7 items-center justify-center rounded-md hover:bg-muted hover:text-foreground"
+            aria-label="Pin notes"
+            className="flex size-8 items-center justify-center rounded-md outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <PushPinIcon className="size-4" />
           </button>
           <button
             type="button"
             title="Search notes"
-            className="flex size-7 items-center justify-center rounded-md hover:bg-muted hover:text-foreground"
+            aria-label="Search notes"
+            className="flex size-8 items-center justify-center rounded-md outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <MagnifyingGlassIcon className="size-4" />
           </button>
@@ -110,7 +113,16 @@ export function NotesPanel({
           if (!readOnly) editor?.chain().focus().run()
         }}
       >
-        <EditorContent editor={editor} className="h-full" />
+        {isLoading ? (
+          <div className="space-y-2.5 px-4 py-3" aria-hidden>
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-3.5 w-full" />
+            <Skeleton className="h-3.5 w-5/6" />
+            <Skeleton className="h-3.5 w-2/3" />
+          </div>
+        ) : (
+          <EditorContent editor={editor} className="h-full" />
+        )}
       </div>
       {editor && !readOnly ? (
         <NotesSlashMenu editor={editor} keyRef={slashKey} />

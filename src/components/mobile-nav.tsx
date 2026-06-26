@@ -10,11 +10,27 @@ import { SITE } from "@/components/landing/site"
 
 export function MobileNav() {
   const [open, setOpen] = React.useState(false)
-  const close = () => setOpen(false)
+  const toggleRef = React.useRef<HTMLButtonElement>(null)
+  // Close and return focus to the toggle (shared by Esc + backdrop + links).
+  const close = React.useCallback(() => {
+    setOpen(false)
+    toggleRef.current?.focus()
+  }, [])
+
+  // Esc closes the open menu (focus returns via close()).
+  React.useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open, close])
 
   return (
     <div className="md:hidden">
       <Button
+        ref={toggleRef}
         aria-controls="mobile-menu"
         aria-expanded={open}
         aria-label="Toggle menu"

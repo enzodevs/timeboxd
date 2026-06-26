@@ -19,7 +19,12 @@ export function Stats() {
     <section className="border-y border-border/60 bg-card/40 py-16">
       <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 px-4 sm:px-6 lg:grid-cols-4">
         {STATS.map((stat, i) => (
-          <BlurFade key={stat.label} delay={0.08 * i} inView>
+          <BlurFade
+            key={stat.label}
+            delay={0.05 + 0.05 * i}
+            direction="up"
+            inView
+          >
             <div className="text-center">
               <div className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
                 {stat.prefix}

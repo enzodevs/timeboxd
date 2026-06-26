@@ -151,7 +151,13 @@ export function Pricing() {
       />
       <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {TIERS.map((tier, i) => (
-          <BlurFade key={tier.name} delay={0.08 * i} inView className="h-full">
+          <BlurFade
+            key={tier.name}
+            delay={0.06 * i}
+            direction="up"
+            inView
+            className="h-full"
+          >
             <PriceCard tier={tier} />
           </BlurFade>
         ))}

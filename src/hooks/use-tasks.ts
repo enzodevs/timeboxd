@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { QueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import type { Task } from "@/db/schema"
 import {
@@ -82,7 +83,37 @@ export function useTaskMutations(date: string) {
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   })
 
-  return { create, update, remove, reorder }
+  // Undo beats confirmation for reversible deletes: remove from the UI now,
+  // show an undo toast, and only hit the server once the toast expires.
+  const removeWithUndo = (id: string) => {
+    const prev = qc.getQueryData<TaskLists>(key)
+    if (prev)
+      qc.setQueryData<TaskLists>(key, {
+        today: prev.today.filter((t) => t.id !== id),
+        later: prev.later.filter((t) => t.id !== id),
+      })
+    let undone = false
+    const commit = () => {
+      if (undone) return
+      void deleteTask({ data: { id } })
+        .catch(() => prev && qc.setQueryData<TaskLists>(key, prev))
+        .finally(() => qc.invalidateQueries({ queryKey: key }))
+    }
+    toast("To-do deleted", {
+      duration: 6000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true
+          if (prev) qc.setQueryData<TaskLists>(key, prev)
+        },
+      },
+      onAutoClose: commit,
+      onDismiss: commit,
+    })
+  }
+
+  return { create, update, remove, removeWithUndo, reorder }
 }
 
 /** Optimistically write the full lists into the cache (used during drag-drop). */

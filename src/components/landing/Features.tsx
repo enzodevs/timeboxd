@@ -146,7 +146,8 @@ export function Features() {
         {FEATURES.map((feature, i) => (
           <BlurFade
             key={feature.title}
-            delay={0.05 * i}
+            delay={0.04 * i}
+            direction="right"
             inView
             className={cn(feature.className)}
           >

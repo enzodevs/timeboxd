@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import type { Timebox } from "@/db/schema"
 import {
@@ -64,5 +65,35 @@ export function useTimeboxMutations(date: string) {
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   })
 
-  return { create, update, remove }
+  // Undo beats confirmation for reversible deletes: remove from the UI now,
+  // show an undo toast, and only hit the server once the toast expires.
+  const removeWithUndo = (id: string) => {
+    const prev = qc.getQueryData<Timebox[]>(key)
+    if (prev)
+      qc.setQueryData<Timebox[]>(
+        key,
+        prev.filter((b) => b.id !== id)
+      )
+    let undone = false
+    const commit = () => {
+      if (undone) return
+      void deleteTimebox({ data: { id } })
+        .catch(() => prev && qc.setQueryData<Timebox[]>(key, prev))
+        .finally(() => qc.invalidateQueries({ queryKey: key }))
+    }
+    toast("Timebox deleted", {
+      duration: 6000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true
+          if (prev) qc.setQueryData<Timebox[]>(key, prev)
+        },
+      },
+      onAutoClose: commit,
+      onDismiss: commit,
+    })
+  }
+
+  return { create, update, remove, removeWithUndo }
 }

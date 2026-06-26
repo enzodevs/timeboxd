@@ -4,6 +4,7 @@ import type { Task } from "@/db/schema"
 import { useTasks } from "@/hooks/use-tasks"
 import { TodoInput } from "./TodoInput"
 import { SortableTaskList } from "./SortableTaskList"
+import { TaskListSkeleton } from "./TaskListSkeleton"
 
 function EmptyToday({ readOnly }: { readOnly?: boolean }) {
   return (
@@ -39,7 +40,7 @@ export function TodoPanel({
   onViewInGoogle,
   readOnly,
 }: TodoPanelProps) {
-  const { data } = useTasks(date)
+  const { data, isLoading } = useTasks(date)
   const today = data?.today ?? []
 
   return (
@@ -55,15 +56,19 @@ export function TodoPanel({
       </div>
       <TodoInput date={date} readOnly={readOnly} />
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <SortableTaskList
-          id="today"
-          tasks={today}
-          date={date}
-          googleConnected={googleConnected}
-          onViewInGoogle={onViewInGoogle}
-          readOnly={readOnly}
-          empty={<EmptyToday readOnly={readOnly} />}
-        />
+        {isLoading ? (
+          <TaskListSkeleton />
+        ) : (
+          <SortableTaskList
+            id="today"
+            tasks={today}
+            date={date}
+            googleConnected={googleConnected}
+            onViewInGoogle={onViewInGoogle}
+            readOnly={readOnly}
+            empty={<EmptyToday readOnly={readOnly} />}
+          />
+        )}
       </div>
     </section>
   )
